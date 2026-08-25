@@ -30,8 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files - never commit real values, bots scan public repos for them.
 .env*
+# ...but DO commit the template, so a fresh clone knows what to configure.
+# Order matters here: git applies the last matching rule, so this must come after.
+!.env.example
 
 # vercel
 .vercel
