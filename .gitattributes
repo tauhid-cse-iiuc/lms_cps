@@ -1,0 +1,24 @@
+# Normalise line endings so the repository is identical regardless of which OS a
+# commit was made on. Without this, files committed from Windows carry CRLF, which
+# produces whole-file diffs when anyone else touches them and breaks shell scripts
+# on Linux - where both Railway and Vercel build - with "bad interpreter".
+#
+# "text=auto" means: store text files with LF in the repository, and check them
+# out with whatever the local platform prefers.
+* text=auto
+
+# Files that must keep LF even on Windows, because they are executed on Linux.
+*.sh text eol=lf
+
+# Binary files git must never try to normalise or diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
