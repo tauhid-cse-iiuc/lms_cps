@@ -148,6 +148,11 @@ letting it through.
 
 ## Architecture notes
 
+The short version is below. [`ARCHITECTURE.md`](ARCHITECTURE.md) carries the full
+reasoning — the request lifecycle, why progress is counted while quiz scores are
+stored, why uniqueness is a scalar key rather than a composite index, and the
+deployment decisions that are easy to get wrong.
+
 This section records the design and the reasoning behind it. The Status table above is the
 authoritative list of what is built — where the two differ, the Status table is right.
 
