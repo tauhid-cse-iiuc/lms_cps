@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser, type RoleType } from '@/lib/auth';
 import { SignOutButton } from '@/components/sign-out-button';
@@ -19,7 +20,7 @@ export default async function DashboardPage() {
   const role = user.role.type as RoleType;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
+    <main className="mx-auto max-w-3xl px-6 py-10">
       <header className="flex items-baseline justify-between border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-semibold">{user.username}</h1>
@@ -33,36 +34,67 @@ export default async function DashboardPage() {
       <section className="mt-8">
         <RolePanel role={role} />
       </section>
+
+      <section className="mt-10 border-t border-slate-200 pt-6">
+        <h2 className="text-sm font-medium text-slate-600">Everyone</h2>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+          <PanelLink href="/courses" label="Browse all courses" />
+          <PanelLink href="/blog" label="Read the blog" />
+        </ul>
+      </section>
     </main>
   );
 }
 
+function PanelLink({ href, label }: { href: string; label: string }) {
+  return (
+    <li>
+      <Link
+        href={href}
+        className="block rounded border border-slate-200 px-4 py-3 text-sm hover:border-slate-400"
+      >
+        {label}
+      </Link>
+    </li>
+  );
+}
+
 /**
- * What each role sees. Deliberately a plain switch: the set of roles is fixed by
- * the backend permission matrix and is not going to grow at runtime, so a lookup
- * table would add indirection without adding flexibility.
+ * What each role sees. Deliberately a plain lookup: the set of roles is fixed by
+ * the backend permission matrix and will not grow at runtime, so anything more
+ * dynamic would add indirection without adding flexibility.
  */
 function RolePanel({ role }: { role: RoleType }) {
-  const panels: Record<RoleType, { heading: string; items: string[] }> = {
+  const panels: Record<RoleType, { heading: string; links: Array<[string, string]> }> = {
     admin: {
       heading: 'Platform administration',
-      items: [
-        'Manage users and assign roles',
-        'Browse every course and enrolment',
-        'Platform statistics',
+      links: [
+        ['/dashboard/admin', 'Users, roles and statistics'],
+        ['/manage/courses', 'Manage courses'],
+        ['/manage/blog', 'Manage the blog'],
       ],
     },
     'content-manager': {
       heading: 'Content management',
-      items: ['Create and edit any course', 'Manage lessons and quizzes', 'Write blog posts'],
+      links: [
+        ['/manage/courses', 'Manage courses and lessons'],
+        ['/manage/blog', 'Write and publish blog posts'],
+      ],
     },
     instructor: {
       heading: 'Your courses',
-      items: ['Create a course', 'Add lessons and quizzes', 'See who is enrolled and how far they are'],
+      links: [
+        ['/manage/courses', 'Create and edit your courses'],
+        ['/dashboard/learning', 'Courses you are enrolled in'],
+      ],
     },
     student: {
       heading: 'Your learning',
-      items: ['Browse the catalogue', 'Continue a course', 'Take a quiz'],
+      links: [
+        ['/dashboard/learning', 'Continue your courses'],
+        ['/dashboard/results', 'Your quiz results'],
+        ['/courses', 'Find something new'],
+      ],
     },
   };
 
@@ -71,11 +103,9 @@ function RolePanel({ role }: { role: RoleType }) {
   return (
     <>
       <h2 className="text-lg font-medium">{panel.heading}</h2>
-      <ul className="mt-3 space-y-2">
-        {panel.items.map((item) => (
-          <li key={item} className="rounded border border-slate-200 px-4 py-3 text-sm">
-            {item}
-          </li>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        {panel.links.map(([href, label]) => (
+          <PanelLink key={href} href={href} label={label} />
         ))}
       </ul>
     </>
