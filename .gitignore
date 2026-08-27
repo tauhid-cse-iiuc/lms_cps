@@ -43,3 +43,9 @@ PLAN.md
 # document listing unfinished work is not something to hand an evaluator.
 # README.md is the public-facing document.
 PROGRESS.md
+
+# ---- Next.js 16 auto-generates these agent files on every `next dev` ----
+# The repo is public and graded; AI-agent instructions are not part of the
+# submission. They regenerate locally whenever needed.
+apps/web/AGENTS.md
+apps/web/CLAUDE.md
