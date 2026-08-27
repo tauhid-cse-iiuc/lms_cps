@@ -136,7 +136,6 @@ Both apps ship a documented `.env.example`. The ones worth explaining:
 | `IS_PROXIED` | api | `true` behind Railway's HTTPS edge, so Strapi emits `https://` links and `Secure` cookies |
 | `CORS_ORIGINS` | api | Comma-separated list of browser origins allowed to call the API |
 | `STRAPI_URL` | web | Backend address for **server-side** calls; never sent to the browser |
-| `NEXT_PUBLIC_STRAPI_URL` | web | Backend address for **browser** calls. Anything prefixed `NEXT_PUBLIC_` is inlined into the JavaScript bundle and is therefore public — never put a secret behind it |
 
 `PUBLIC_URL` must include its scheme. Strapi decides how to interpret the value by testing whether
 it starts with `http`; without a scheme it treats the value as a URL *path*, prepends a slash, and
@@ -238,7 +237,7 @@ progress record each time the service restarted.
 
 | | |
 |---|---|
-| **Frontend** | Vercel, Root Directory `apps/web`, with `STRAPI_URL` and `NEXT_PUBLIC_STRAPI_URL` |
+| **Frontend** | Vercel, Root Directory `apps/web`, with `STRAPI_URL` |
 | **Backend** | Railway, Root Directory `apps/api`, with a managed PostgreSQL service |
 
 Both hosts support a per-service root directory, which is what lets a single repository deploy to
@@ -249,10 +248,9 @@ service rather than a copied string, so it keeps working if the credentials rota
 boot against an empty database takes a couple of minutes while it creates its tables, and returns
 502 until it is ready even though the platform reports the container as running.
 
-`https://lms-cps-eta.vercel.app/health` is a small diagnostic page that checks the frontend can
-reach the backend, separately from the server and from the browser. Those two paths fail for
-different reasons — only the browser one is subject to CORS — so testing them together would hide
-which is broken.
+CORS is a **browser** rule and is invisible to `curl`: a server-to-server call succeeds whatever
+the allow-list says. Test it by sending an explicit `Origin` header and checking
+`access-control-allow-origin` comes back.
 
 ---
 
