@@ -15,7 +15,9 @@ Backend admin panel: https://lmscps-production.up.railway.app/admin
 
 ## Status
 
-Under active development. This table reflects what is actually working, not what is planned.
+This table reflects what is actually working, not what is planned. Every row marked complete is
+covered by assertions run against a live server - 29 for the API's authorization and features, 16
+for the admin panel, and 34 through the running web app.
 
 **Foundation**
 
@@ -23,25 +25,25 @@ Under active development. This table reflects what is actually working, not what
 |---|---|
 | ✅ | Both apps deployed and talking to each other (Vercel ↔ Railway, CORS verified) |
 | ✅ | Data model — 7 content types + the quiz-question component |
-| ⬜ | Role bootstrap — the four roles, their permissions, and demo users |
+| ✅ | Role bootstrap — the four roles, their permissions, and demo users |
 
 **Core features**
 
 | | |
 |---|---|
-| ⬜ | Authentication and role-based access, enforced server-side |
-| ⬜ | Course management (create, edit, delete) |
-| ⬜ | Course enrollment — browse, enroll, "My Courses" |
-| ⬜ | Lesson viewing in sequence |
+| ✅ | Authentication and role-based access, enforced server-side |
+| ✅ | Course management (create, edit, delete) |
+| ✅ | Course enrollment — browse, enroll, "My Courses" |
+| ✅ | Lesson viewing in sequence |
 
 **Differentiator features**
 
 | | |
 |---|---|
-| ⬜ | Progress tracking — mark complete, percentage per student per course |
-| ⬜ | Quizzes with automatic grading and stored results |
-| ⬜ | Admin dashboard — user list, role assignment, platform statistics |
-| ⬜ | Blog with draft/published states |
+| ✅ | Progress tracking — mark complete, percentage per student per course |
+| ✅ | Quizzes with automatic grading and stored results |
+| ✅ | Admin dashboard — user list, role assignment, platform statistics |
+| ✅ | Blog with draft/published states |
 
 ---
 
@@ -66,8 +68,22 @@ authored, an Admin manages every post including other people's.
 
 ## Demo accounts
 
-_Added once the role bootstrap lands. One account per role, created by the seed script so the same
-logins exist in any environment._
+One account per role, created by the bootstrap seed so the same logins exist in every environment -
+including a freshly deployed one.
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@lms.test` | `Demo1234!` |
+| Content Manager | `manager@lms.test` | `Demo1234!` |
+| Instructor | `instructor@lms.test` | `Demo1234!` |
+| Student | `student@lms.test` | `Demo1234!` |
+
+These are shared demo accounts and the passwords are published deliberately. `SEED_DEMO_PASSWORD`
+overrides the default; `SEED_DEMO_USERS=false` skips creating them entirely, which is what a real
+deployment would set.
+
+The `.test` domain is reserved by RFC 2606, so these addresses can never collide with a real
+mailbox.
 
 ---
 
