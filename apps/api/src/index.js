@@ -2,6 +2,7 @@
 
 const seedRolesAndPermissions = require('./seed/roles');
 const seedDemoUsers = require('./seed/demo-users');
+const seedDemoContent = require('./seed/demo-content');
 
 module.exports = {
   /**
@@ -39,6 +40,11 @@ module.exports = {
     try {
       await seedRolesAndPermissions(strapi);
       await seedDemoUsers(strapi);
+      // Runs last, and only into a platform with no courses at all. Unlike the
+      // two above it does not reconcile: demo content is a starting point, not
+      // infrastructure, so once someone has edited or deleted it the seeder
+      // stays out of the way rather than putting it back on every restart.
+      await seedDemoContent(strapi);
     } catch (error) {
       strapi.log.error(
         '[seed] failed - the application would have started without working roles, so refusing to start'

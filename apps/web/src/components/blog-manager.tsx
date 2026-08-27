@@ -13,12 +13,19 @@ const field =
   'mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900';
 
 /**
- * Draft and published states come from Strapi's native Draft & Publish, not a
- * status field of our own: `publishedAt` set means published, null means draft.
- * Using the built-in means "only published posts are public" is enforced by the
- * same mechanism that powers the filtering, rather than by a rule we maintain.
+ * Draft and published states come from Strapi's native Draft & Publish rather
+ * than a status field of our own, so "only published posts are public" is
+ * enforced by the same mechanism that does the filtering.
+ *
+ * `isPublished` is computed by the page, not read from `publishedAt`. Every
+ * document has a draft version AND possibly a published one, and on the draft
+ * version publishedAt is null whether or not the post is live - so trusting that
+ * field would label every published post a draft. See the page for how it is
+ * worked out.
  */
-export function BlogManager({ posts }: { posts: BlogPost[] }) {
+type ManagedPost = BlogPost & { isPublished: boolean };
+
+export function BlogManager({ posts }: { posts: ManagedPost[] }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -57,7 +64,7 @@ export function BlogManager({ posts }: { posts: BlogPost[] }) {
       ) : (
         <ul className="space-y-2">
           {posts.map((post) => {
-            const published = Boolean(post.publishedAt);
+            const published = post.isPublished;
             return (
               <li
                 key={post.documentId}

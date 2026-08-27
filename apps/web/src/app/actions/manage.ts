@@ -241,14 +241,19 @@ export async function createBlogPostAction(input: {
       slug: `${slugify(input.title)}-${Date.now().toString(36)}`,
       excerpt: input.excerpt.trim() || undefined,
       body: input.body.trim() || undefined,
-      // Draft & Publish is native to Strapi. Setting publishedAt is what makes a
-      // post public; leaving it null keeps it a draft, which the backend hides
-      // from anyone without write access.
-      publishedAt: input.publish ? new Date().toISOString() : null,
     },
   });
 
   if (!res.ok) return { ok: false as const, error: res.error };
+
+  // A create always produces a draft. Publishing is a second, explicit step.
+  if (input.publish) {
+    const published = await apiPost(
+      `/api/blog-posts/${res.data.data.documentId}/publish`,
+      {}
+    );
+    if (!published.ok) return { ok: false as const, error: published.error };
+  }
 
   revalidatePath('/blog');
   revalidatePath('/manage/blog');
@@ -257,9 +262,14 @@ export async function createBlogPostAction(input: {
 }
 
 export async function setBlogPostPublishedAction(documentId: string, publish: boolean) {
-  const res = await apiPut(`/api/blog-posts/${documentId}`, {
-    data: { publishedAt: publish ? new Date().toISOString() : null },
-  });
+  // Named endpoints, not a publishedAt field. In Strapi 5 every entry has a
+  // draft and a published version, and writing publishedAt into the data is
+  // silently overwritten - the post keeps a date that says it is live while
+  // staying invisible to the public.
+  const res = await apiPost(
+    `/api/blog-posts/${documentId}/${publish ? 'publish' : 'unpublish'}`,
+    {}
+  );
 
   if (!res.ok) return { ok: false as const, error: res.error };
 

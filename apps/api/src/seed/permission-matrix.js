@@ -71,6 +71,11 @@ const ADMIN_STATS = 'api::admin-panel.admin-panel.stats'; //          GET /api/a
 const ADMIN_USERS = 'api::admin-panel.admin-panel.users'; //          GET /api/admin/users
 const ADMIN_SET_ROLE = 'api::admin-panel.admin-panel.setUserRole'; // PUT /api/admin/users/:id/role
 
+// Publishing is a named action rather than a field - see the blog-post
+// controller. Granted alongside blog writes, and narrowed by owns-blog-post.
+const BLOG_PUBLISH = `${BLOG}.publish`; //     POST /api/blog-posts/:id/publish
+const BLOG_UNPUBLISH = `${BLOG}.unpublish`; // POST /api/blog-posts/:id/unpublish
+
 // Endpoints belonging to the users-permissions plugin itself, which the Admin
 // role needs in order to manage users. `destroy` rather than `delete` - that is
 // the method name the plugin uses.
@@ -147,6 +152,8 @@ const ROLES = [
       ADMIN_STATS,
       ADMIN_USERS,
       ADMIN_SET_ROLE,
+      BLOG_PUBLISH,
+      BLOG_UNPUBLISH,
     ],
   },
 
@@ -170,6 +177,8 @@ const ROLES = [
       COURSE_MINE,
       COURSE_PROGRESS,
       COURSE_STUDENTS,
+      BLOG_PUBLISH,
+      BLOG_UNPUBLISH,
     ],
   },
 

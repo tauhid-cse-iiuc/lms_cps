@@ -75,6 +75,54 @@ module.exports = createCoreController('api::blog-post.blog-post', ({ strapi }) =
     }
     return super.findOne(ctx);
   },
+
+  /**
+   * POST /api/blog-posts/:id/publish  and  /unpublish
+   *
+   * Publishing is an ACTION in Strapi 5, not a field you set.
+   *
+   * Every entry has a draft version and a published version. Writing
+   * publishedAt into the data on create or update looks like it should publish
+   * and does not - the value is overwritten and the post stays invisible to the
+   * public, with a date sitting in the record that says otherwise. That is a
+   * genuinely confusing failure: the row exists, the field is populated, and the
+   * blog is still empty.
+   *
+   * Doing it through named endpoints rather than a query-string convention means
+   * the intent is explicit at the call site, and the permission matrix can grant
+   * publishing separately from editing if that is ever wanted.
+   */
+  async publish(ctx) {
+    const { id } = ctx.params;
+
+    const post = await strapi.documents('api::blog-post.blog-post').findOne({
+      documentId: id,
+      status: 'draft',
+    });
+
+    if (!post) return ctx.notFound('No such post.');
+
+    await strapi.documents('api::blog-post.blog-post').publish({ documentId: id });
+
+    return { data: { documentId: id, published: true } };
+  },
+
+  async unpublish(ctx) {
+    const { id } = ctx.params;
+
+    const post = await strapi.documents('api::blog-post.blog-post').findOne({
+      documentId: id,
+      status: 'draft',
+    });
+
+    if (!post) return ctx.notFound('No such post.');
+
+    // Unpublishing removes the published version; the draft survives, so the
+    // post returns to the author's management view rather than disappearing.
+    await strapi.documents('api::blog-post.blog-post').unpublish({ documentId: id });
+
+    return { data: { documentId: id, published: false } };
+  },
 }));
 
 /** Admins and Content Managers write the blog; nobody else sees a draft. */
