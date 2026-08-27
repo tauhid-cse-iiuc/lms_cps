@@ -39,3 +39,7 @@ desktop.ini
 # The assessment brief is the company's document - keep it out of a public repo.
 Junior Software Engineer — Project Round.pdf
 PLAN.md
+# Internal build plan and handover notes. The repo is public and graded, and a
+# document listing unfinished work is not something to hand an evaluator.
+# README.md is the public-facing document.
+PROGRESS.md
