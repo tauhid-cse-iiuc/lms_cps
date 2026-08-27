@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_quiz_questions",
+  "info": {
+    "displayName": "Question",
+    "description": "One multiple-choice question. `correctIndex` is the answer key and must never reach a student."
+  },
+  "options": {},
+  "attributes": {
+    "text": {
+      "type": "string",
+      "required": true
+    },
+    "options": {
+      "type": "json",
+      "required": true
+    },
+    "correctIndex": {
+      "type": "integer",
+      "required": true,
+      "min": 0
+    }
+  }
+}

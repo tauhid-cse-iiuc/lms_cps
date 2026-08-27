@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "lesson_completions",
+  "info": {
+    "singularName": "lesson-completion",
+    "pluralName": "lesson-completions",
+    "displayName": "Lesson completion",
+    "description": "One student finished one lesson. Logically unique on (student, lesson). `course` is denormalised so progress can be counted without joining through lessons."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "student": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "lesson": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::lesson.lesson",
+      "inversedBy": "completions"
+    },
+    "course": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::course.course"
+    },
+    "completedAt": {
+      "type": "datetime"
+    }
+  }
+}
