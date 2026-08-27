@@ -64,6 +64,13 @@ const ENROLLMENT_MINE = `${ENROLLMENT}.mine`; //  GET  /api/my/enrollments
 const ATTEMPT_MINE = `${ATTEMPT}.mine`; //        GET  /api/my/quiz-attempts
 const QUIZ_SUBMIT = `${QUIZ}.submit`; //          POST /api/quizzes/:id/submit
 
+// The admin panel. This api has no content type behind it - the endpoints report
+// on the data rather than exposing a table - but the action strings are formed
+// the same way, from the api name and the controller method.
+const ADMIN_STATS = 'api::admin-panel.admin-panel.stats'; //          GET /api/admin/stats
+const ADMIN_USERS = 'api::admin-panel.admin-panel.users'; //          GET /api/admin/users
+const ADMIN_SET_ROLE = 'api::admin-panel.admin-panel.setUserRole'; // PUT /api/admin/users/:id/role
+
 // Endpoints belonging to the users-permissions plugin itself, which the Admin
 // role needs in order to manage users. `destroy` rather than `delete` - that is
 // the method name the plugin uses.
@@ -135,6 +142,11 @@ const ROLES = [
       COURSE_MINE,
       COURSE_PROGRESS,
       COURSE_STUDENTS,
+      // Admin only, and additionally guarded by the is-admin policy on each
+      // route - these are where being wrong means somebody promotes themselves.
+      ADMIN_STATS,
+      ADMIN_USERS,
+      ADMIN_SET_ROLE,
     ],
   },
 
