@@ -51,6 +51,19 @@ const CRUD = [...READ, ...WRITE];
 /** Expands a content type and a list of methods into action strings. */
 const on = (uid, methods) => methods.map((method) => `${uid}.${method}`);
 
+// Custom endpoints, beyond the five a factory controller generates.
+//
+// These could only be added here once their controller method AND their route
+// existed - see rule 1 at the top of this file. Listed before that point they
+// would have been silently deleted on the next boot, and the endpoint would
+// have answered 403 with nothing to explain why.
+const COURSE_MINE = `${COURSE}.mine`; //          GET  /api/my/courses
+const COURSE_PROGRESS = `${COURSE}.progress`; //  GET  /api/courses/:id/progress
+const COURSE_STUDENTS = `${COURSE}.students`; //  GET  /api/courses/:id/students
+const ENROLLMENT_MINE = `${ENROLLMENT}.mine`; //  GET  /api/my/enrollments
+const ATTEMPT_MINE = `${ATTEMPT}.mine`; //        GET  /api/my/quiz-attempts
+const QUIZ_SUBMIT = `${QUIZ}.submit`; //          POST /api/quizzes/:id/submit
+
 // Endpoints belonging to the users-permissions plugin itself, which the Admin
 // role needs in order to manage users. `destroy` rather than `delete` - that is
 // the method name the plugin uses.
@@ -119,6 +132,9 @@ const ROLES = [
       ...on(ENROLLMENT, READ),
       ...on(COMPLETION, READ),
       ...on(ATTEMPT, READ),
+      COURSE_MINE,
+      COURSE_PROGRESS,
+      COURSE_STUDENTS,
     ],
   },
 
@@ -139,6 +155,9 @@ const ROLES = [
       ...on(ENROLLMENT, READ),
       ...on(COMPLETION, READ),
       ...on(ATTEMPT, READ),
+      COURSE_MINE,
+      COURSE_PROGRESS,
+      COURSE_STUDENTS,
     ],
   },
 
@@ -162,6 +181,10 @@ const ROLES = [
       ...on(ATTEMPT, READ),
       // Instructors read the blog like anyone else but do not write it.
       ...on(BLOG, READ),
+      // Their own courses, and how their students are doing on them.
+      COURSE_MINE,
+      COURSE_PROGRESS,
+      COURSE_STUDENTS,
     ],
   },
 
@@ -198,6 +221,14 @@ const ROLES = [
       ...on(ATTEMPT, READ),
 
       ...on(BLOG, READ),
+
+      // Their own progress, enrolments and results, plus the one endpoint that
+      // creates an attempt. Note QUIZ_SUBMIT is the ONLY route by which an
+      // attempt can be written, and it grades server-side.
+      COURSE_PROGRESS,
+      ENROLLMENT_MINE,
+      ATTEMPT_MINE,
+      QUIZ_SUBMIT,
     ],
   },
 

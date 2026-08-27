@@ -25,6 +25,12 @@
     },
     "enrolledAt": {
       "type": "datetime"
+    },
+    "enrollmentKey": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "private": true
     }
   }
 }
