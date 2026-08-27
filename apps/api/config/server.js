@@ -46,10 +46,24 @@ module.exports = ({ env }) => ({
   // https:// scheme* - see readPublicUrl above for what happens otherwise.
   url: readPublicUrl(env),
 
-  // Railway terminates HTTPS at its edge and forwards plain HTTP internally.
-  // Without this, Strapi sees an http request and generates http:// links and
-  // non-Secure cookies, which browsers then reject on an https page.
-  proxy: env.bool('IS_PROXIED', false),
+  // Railway terminates HTTPS at its edge and forwards plain HTTP internally, so
+  // Strapi has to be told to trust the X-Forwarded-Proto header. Without it Koa
+  // reports every request as insecure.
+  //
+  // This MUST be an object. Strapi reads `server.proxy.koa` (see @strapi/core
+  // services/server/index.js), so the older boolean form silently resolves to
+  // undefined and leaves app.proxy off - with no warning, because a boolean is
+  // not an invalid value, just the wrong shape.
+  //
+  // What that costs is a production-only 500 on login. Koa's cookie library
+  // throws 'Cannot send secure cookie over unencrypted connection' when asked to
+  // set a Secure cookie on a connection it believes is plain HTTP, and the
+  // users-permissions login handler sets exactly such a cookie for the refresh
+  // token whenever NODE_ENV is production. Locally NODE_ENV is not production,
+  // the cookie is not marked Secure, nothing throws, and the bug is invisible.
+  proxy: {
+    koa: env.bool('IS_PROXIED', false),
+  },
 
   app: {
     keys: env.array('APP_KEYS'),
