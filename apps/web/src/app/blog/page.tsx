@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { apiGet, type BlogPost } from '@/lib/api';
 
-export const metadata = { title: 'Blog — LMS' };
+export const metadata = { title: 'Blog' };
 
 /**
  * The public blog.

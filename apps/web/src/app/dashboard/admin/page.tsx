@@ -4,7 +4,7 @@ import { apiGet, type AdminStats, type AdminUser } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { RolePicker } from '@/components/role-picker';
 
-export const metadata = { title: 'Admin — LMS' };
+export const metadata = { title: 'Admin' };
 
 /**
  * The admin panel: platform statistics, and the user list with role assignment.

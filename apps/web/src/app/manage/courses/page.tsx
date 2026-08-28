@@ -4,7 +4,7 @@ import { apiGet, type Course } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { CourseForm } from '@/components/course-form';
 
-export const metadata = { title: 'Manage courses — LMS' };
+export const metadata = { title: 'Manage courses' };
 
 /**
  * The instructor and content-manager view.

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { apiGet, type AttemptSummary } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 
-export const metadata = { title: 'My results — LMS' };
+export const metadata = { title: 'My results' };
 
 /**
  * Quiz results, stored and viewable later - which the brief asks for explicitly.

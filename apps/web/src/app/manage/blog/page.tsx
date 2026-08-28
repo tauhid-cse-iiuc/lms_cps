@@ -4,7 +4,7 @@ import { apiGet, type BlogPost } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { BlogManager } from '@/components/blog-manager';
 
-export const metadata = { title: 'Manage blog — LMS' };
+export const metadata = { title: 'Manage blog' };
 
 /**
  * Blog authoring, for Admins and Content Managers.

@@ -1,1 +1,134 @@
 @import "tailwindcss";
+
+/*
+ * Design tokens.
+ *
+ * Tailwind v4 reads @theme and generates utilities from it, so `--color-ink-500`
+ * here becomes `text-ink-500`, `bg-ink-500` and so on. Defining the palette in
+ * one place means a colour is never picked twice with slightly different values.
+ */
+@theme {
+  /* next/font sets --font-inter; this is what makes `font-sans` use it. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Text and surfaces. Warm greys rather than pure neutral, so large areas of
+     white do not read as clinical. */
+  --color-ink-50: oklch(0.985 0.002 250);
+  --color-ink-100: oklch(0.968 0.004 250);
+  --color-ink-200: oklch(0.925 0.006 250);
+  --color-ink-300: oklch(0.86 0.008 250);
+  --color-ink-400: oklch(0.68 0.012 250);
+  --color-ink-500: oklch(0.55 0.015 250);
+  --color-ink-600: oklch(0.44 0.018 250);
+  --color-ink-700: oklch(0.35 0.02 250);
+  --color-ink-800: oklch(0.26 0.02 250);
+  --color-ink-900: oklch(0.18 0.02 250);
+
+  /* One accent, used for interactive state and progress. A single hue keeps the
+     interface calm; the differentiators are the content, not the chrome. */
+  --color-brand-50: oklch(0.97 0.02 255);
+  --color-brand-100: oklch(0.93 0.05 255);
+  --color-brand-200: oklch(0.87 0.09 255);
+  --color-brand-300: oklch(0.78 0.13 255);
+  --color-brand-400: oklch(0.68 0.17 255);
+  --color-brand-500: oklch(0.58 0.19 255);
+  --color-brand-600: oklch(0.5 0.19 255);
+  --color-brand-700: oklch(0.42 0.16 255);
+
+  --color-success: oklch(0.62 0.15 150);
+  --color-danger: oklch(0.55 0.19 25);
+
+  /* Type scale, roughly a 1.25 ratio. Named by role rather than size so a
+     heading does not get chosen by how big it looks. */
+  --text-micro: 0.75rem;
+  --text-small: 0.875rem;
+  --text-body: 1rem;
+  --text-lead: 1.125rem;
+  --text-title: 1.375rem;
+  --text-display: 1.875rem;
+  --text-hero: 2.5rem;
+
+  --radius-card: 0.75rem;
+
+  /* One easing, one duration family. Motion that varies per component reads as
+     inconsistent rather than expressive. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+ * Respect the operating-system setting.
+ *
+ * prefers-reduced-motion is not a preference about taste - for some people
+ * animation causes nausea or migraine. Everything here degrades to an instant
+ * state change rather than being removed, so nothing becomes invisible.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * A visible focus ring, always.
+ *
+ * Removing the default outline without replacing it is the single most common
+ * accessibility regression in styled applications - the element stays reachable
+ * by keyboard and becomes impossible to locate. This replaces it deliberately.
+ */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Skip link: first thing a keyboard user reaches, invisible until focused. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+}
+.skip-link:focus {
+  left: 0.75rem;
+  top: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--color-ink-900);
+  color: white;
+  border-radius: 0.375rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* Entrance used by server-rendered lists, where JavaScript animation would mean
+   shipping a client component for decoration alone. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.45s var(--ease-out-soft) both;
+}

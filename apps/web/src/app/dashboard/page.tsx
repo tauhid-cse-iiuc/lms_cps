@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser, type RoleType } from '@/lib/auth';
 import { SignOutButton } from '@/components/sign-out-button';
 
-export const metadata = { title: 'Dashboard — LMS' };
+export const metadata = { title: 'Dashboard' };
 
 /**
  * Rendered on the server, so the role is decided before any HTML is produced.

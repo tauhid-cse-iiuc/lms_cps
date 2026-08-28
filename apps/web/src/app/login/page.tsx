@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AuthForm } from '@/components/auth-form';
 
-export const metadata = { title: 'Sign in — LMS' };
+export const metadata = { title: 'Sign in' };
 
 export default function LoginPage() {
   return (

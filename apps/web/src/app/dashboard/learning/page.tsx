@@ -4,7 +4,7 @@ import { apiGet, type Enrollment, type Progress } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { ProgressBar } from '@/components/progress-bar';
 
-export const metadata = { title: 'My learning — LMS' };
+export const metadata = { title: 'My learning' };
 
 /**
  * The courses this student is enrolled in, each with its progress.

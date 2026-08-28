@@ -4,6 +4,17 @@ import { apiGet, type Course, type Enrollment, type Progress, type Quiz } from '
 import { getCurrentUser } from '@/lib/auth';
 import { ProgressBar } from '@/components/progress-bar';
 import { EnrollButton } from '@/components/enroll-button';
+import { PageShell, Card, Badge, Button } from '@/components/ui';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const res = await apiGet<{ data: Course }>(`/api/courses/${id}`);
+  return { title: res.ok ? res.data.data.title : 'Course' };
+}
 
 /**
  * One course.
@@ -22,7 +33,6 @@ export default async function CoursePage({
   const user = await getCurrentUser();
 
   const courseRes = await apiGet<{ data: Course }>(`/api/courses/${id}?populate=owner`);
-
   if (!courseRes.ok || !courseRes.data?.data) notFound();
   const course = courseRes.data.data;
 
@@ -31,9 +41,7 @@ export default async function CoursePage({
 
   if (user) {
     const mine = await apiGet<{ data: Enrollment[] }>('/api/my/enrollments');
-    if (mine.ok) {
-      enrolled = mine.data.data.some((e) => e.course?.documentId === id);
-    }
+    if (mine.ok) enrolled = mine.data.data.some((e) => e.course?.documentId === id);
 
     if (enrolled) {
       const p = await apiGet<{ data: Progress }>(`/api/courses/${id}/progress`);
@@ -52,82 +60,124 @@ export default async function CoursePage({
     if (q.ok) quizzes = q.data.data;
   }
 
+  const nextLesson = progress?.lessons.find((l) => !l.completed);
+
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <Link href="/courses" className="text-sm text-slate-600 underline">
-        &larr; All courses
+    <PageShell>
+      <Link
+        href="/courses"
+        className="inline-flex items-center gap-1.5 text-small text-ink-500 transition-colors hover:text-ink-900"
+      >
+        <span aria-hidden>&larr;</span> All courses
       </Link>
 
-      <h1 className="mt-4 text-2xl font-semibold">{course.title}</h1>
-      {course.owner?.username && (
-        <p className="text-sm text-slate-600">by {course.owner.username}</p>
-      )}
-      {course.description && <p className="mt-4 text-slate-700">{course.description}</p>}
+      <header className="animate-rise mt-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {enrolled && <Badge tone="success">Enrolled</Badge>}
+          {isOwner && <Badge>Your course</Badge>}
+          {isStaff && !isOwner && <Badge tone="muted">Staff view</Badge>}
+        </div>
+
+        <h1 className="mt-3 text-display font-semibold tracking-tight">
+          {course.title}
+        </h1>
+        {course.owner?.username && (
+          <p className="mt-1 text-small text-ink-500">by {course.owner.username}</p>
+        )}
+        {course.description && (
+          <p className="mt-4 text-lead leading-relaxed text-ink-700">
+            {course.description}
+          </p>
+        )}
+      </header>
 
       {!user && (
-        <p className="mt-6 rounded border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-          <Link href="/login" className="font-medium underline">
-            Sign in
-          </Link>{' '}
-          to enrol and view the lessons.
-        </p>
+        <Card className="mt-8 p-5">
+          <p className="text-small text-ink-600">
+            <Link href="/login" className="font-medium text-ink-900 underline">
+              Sign in
+            </Link>{' '}
+            to enrol and read the lessons. The catalogue is public; the material is not.
+          </p>
+        </Card>
       )}
 
       {user && !enrolled && !isOwner && !isStaff && (
-        <div className="mt-6">
+        <div className="animate-rise mt-8">
           <EnrollButton courseId={course.documentId} />
         </div>
       )}
 
       {progress && (
-        <section className="mt-8">
-          <ProgressBar
-            percentage={progress.percentage}
-            label={`${progress.completedLessons} of ${progress.totalLessons} lessons complete`}
-          />
+        <section className="animate-rise mt-10" style={{ animationDelay: '0.05s' }}>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <h2 className="text-title font-semibold">Lessons</h2>
+            {nextLesson && (
+              <Button href={`/learn/${course.documentId}/${nextLesson.documentId}`}>
+                {progress.completedLessons === 0 ? 'Start course' : 'Continue'}
+              </Button>
+            )}
+          </div>
 
-          <ul className="mt-4 space-y-2">
-            {progress.lessons.map((lesson) => (
-              <li key={lesson.documentId}>
-                <Link
-                  href={`/learn/${course.documentId}/${lesson.documentId}`}
-                  className="flex items-center gap-3 rounded border border-slate-200 px-4 py-3 text-sm hover:border-slate-400"
-                >
-                  <span
-                    aria-hidden
-                    className={
-                      lesson.completed
-                        ? 'inline-block h-4 w-4 rounded-full bg-slate-900'
-                        : 'inline-block h-4 w-4 rounded-full border border-slate-300'
-                    }
-                  />
-                  <span className="flex-1">
-                    {lesson.order}. {lesson.title}
-                  </span>
-                  <span className="sr-only">
-                    {lesson.completed ? 'Completed' : 'Not completed'}
-                  </span>
+          <div className="mt-4">
+            <ProgressBar
+              percentage={progress.percentage}
+              label={`${progress.completedLessons} of ${progress.totalLessons} lessons complete`}
+            />
+          </div>
+
+          <ol className="mt-5 space-y-2">
+            {progress.lessons.map((lesson, i) => (
+              <li
+                key={lesson.documentId}
+                className="animate-rise"
+                style={{ animationDelay: `${0.1 + Math.min(i, 10) * 0.04}s` }}
+              >
+                <Link href={`/learn/${course.documentId}/${lesson.documentId}`}>
+                  <Card
+                    interactive
+                    className="flex items-center gap-4 px-4 py-3.5"
+                  >
+                    <span
+                      aria-hidden
+                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-micro font-semibold transition-colors ${
+                        lesson.completed
+                          ? 'bg-success text-white'
+                          : 'border border-ink-300 text-ink-400'
+                      }`}
+                    >
+                      {lesson.completed ? '✓' : lesson.order}
+                    </span>
+
+                    <span className="min-w-0 flex-1 text-small">{lesson.title}</span>
+
+                    <span className="sr-only">
+                      {lesson.completed ? 'Completed' : 'Not completed'}
+                    </span>
+                    <span aria-hidden className="text-ink-300">
+                      &rarr;
+                    </span>
+                  </Card>
                 </Link>
               </li>
             ))}
-          </ul>
+          </ol>
         </section>
       )}
 
       {quizzes.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-lg font-medium">Quizzes</h2>
-          <ul className="mt-3 space-y-2">
+        <section className="animate-rise mt-10" style={{ animationDelay: '0.1s' }}>
+          <h2 className="text-title font-semibold">Quizzes</h2>
+          <ul className="mt-4 space-y-2">
             {quizzes.map((quiz) => (
               <li key={quiz.documentId}>
-                <Link
-                  href={`/quiz/${quiz.documentId}`}
-                  className="block rounded border border-slate-200 px-4 py-3 text-sm hover:border-slate-400"
-                >
-                  {quiz.title}
-                  <span className="ml-2 text-slate-500">
-                    ({quiz.questions?.length ?? 0} questions)
-                  </span>
+                <Link href={`/quiz/${quiz.documentId}`}>
+                  <Card interactive className="flex items-center justify-between gap-4 px-4 py-3.5">
+                    <span className="text-small font-medium">{quiz.title}</span>
+                    <span className="text-micro text-ink-500">
+                      {quiz.questions?.length ?? 0} questions
+                    </span>
+                  </Card>
                 </Link>
               </li>
             ))}
@@ -136,21 +186,21 @@ export default async function CoursePage({
       )}
 
       {(isOwner || isStaff) && (
-        <section className="mt-8 rounded border border-slate-200 p-4">
-          <h2 className="text-sm font-medium">Manage</h2>
-          <div className="mt-2 flex flex-wrap gap-3 text-sm">
-            <Link href={`/manage/courses/${course.documentId}`} className="underline">
+        <section className="mt-12 border-t border-ink-200 pt-6">
+          <h2 className="text-small font-semibold text-ink-500">Manage</h2>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Button href={`/manage/courses/${course.documentId}`} variant="secondary">
               Edit course and lessons
-            </Link>
-            <Link
+            </Button>
+            <Button
               href={`/manage/courses/${course.documentId}/students`}
-              className="underline"
+              variant="secondary"
             >
               Enrolled students
-            </Link>
+            </Button>
           </div>
         </section>
       )}
-    </main>
+    </PageShell>
   );
 }
