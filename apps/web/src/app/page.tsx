@@ -57,7 +57,7 @@ export default async function HomePage() {
       </Hero>
 
       {/* How it works, in the order a student actually meets it. */}
-      <section className="relative overflow-hidden border-y border-ink-200 bg-surface-sunken">
+      <section className="relative overflow-hidden border-y border-ink-200 bg-white/70 backdrop-blur-sm">
         <div aria-hidden className="bg-dots absolute inset-0 opacity-70" />
 
         <div className="relative mx-auto max-w-5xl px-4 py-20 sm:px-6">
@@ -178,7 +178,7 @@ export default async function HomePage() {
       </section>
 
       {/* Closing call to action. */}
-      <section className="border-t border-ink-200 bg-surface-sunken">
+      <section className="border-t border-ink-200 bg-white/70 backdrop-blur-sm">
         <div className="mx-auto max-w-3xl px-4 py-20 text-center sm:px-6">
           <h2 className="text-display font-semibold tracking-tight">
             {user ? 'Pick up where you left off' : 'Start learning today'}

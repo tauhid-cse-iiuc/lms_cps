@@ -143,7 +143,7 @@ export function Hero({
             edge, which would read as two unrelated pages stacked. */}
         <div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-white"
+          className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-canvas"
         />
       </section>
 

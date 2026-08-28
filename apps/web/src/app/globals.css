@@ -18,8 +18,8 @@
   --color-ink-200: oklch(0.925 0.006 250);
   --color-ink-300: oklch(0.86 0.008 250);
   --color-ink-350: oklch(0.68 0.012 250); /* borders and icons only, never text */
-  --color-ink-400: oklch(0.56 0.012 250); /* 4.66:1 on white - it carries real text */
-  --color-ink-500: oklch(0.55 0.015 250);
+  --color-ink-400: oklch(0.515 0.012 250); /* muted text: 4.55:1 even on the sunken well */
+  --color-ink-500: oklch(0.47 0.015 250); /* kept clearly darker than 400 so the ramp stays ordered */
   --color-ink-600: oklch(0.44 0.018 250);
   --color-ink-700: oklch(0.35 0.02 250);
   --color-ink-800: oklch(0.26 0.02 250);
@@ -60,8 +60,21 @@
 
   /* Layered surfaces. A single white page has no depth; these give sections
      something to sit ON, which is most of what "richness" actually is. */
+  /*
+   * The page ground is NOT white, and that is the point.
+   *
+   * White cards on a white page cannot read as raised - there is nothing for
+   * them to be raised above, so a border is doing all the work and the result
+   * looks like a wireframe however much shadow is added. Tinting the canvas a
+   * few percent gives every white surface something to sit on, and it is the
+   * single change that does most for perceived depth.
+   *
+   * Kept cool and very light so body text keeps its contrast: ink-900 on this
+   * is still comfortably past AA.
+   */
+  --color-canvas: oklch(0.952 0.011 265);
   --color-surface: oklch(1 0 0);
-  --color-surface-sunken: oklch(0.985 0.004 260);
+  --color-surface-sunken: oklch(0.927 0.014 265);
   --color-surface-raised: oklch(1 0 0);
 
   /* The dark end. Deep and slightly blue rather than neutral black, so it reads
@@ -321,4 +334,22 @@ h3 {
 }
 .animate-pop {
   animation: pop 0.4s var(--ease-out-soft) both;
+}
+
+
+/*
+ * The living ground.
+ *
+ * Three slow, widely-spread colour fields over the tinted canvas. Fixed rather
+ * than scrolled, so the page moves across the light instead of dragging it
+ * along - which is what makes it read as a room rather than a printed sheet.
+ *
+ * Pointer-events none and aria-hidden at the usage site: it is decoration and
+ * must never intercept a click or reach a screen reader.
+ */
+.bg-canvas-field {
+  background:
+    radial-gradient(48rem 32rem at 8% 0%, oklch(0.58 0.19 255 / 0.1), transparent 60%),
+    radial-gradient(42rem 30rem at 96% 12%, oklch(0.58 0.2 300 / 0.09), transparent 58%),
+    radial-gradient(40rem 28rem at 50% 100%, oklch(0.65 0.13 180 / 0.08), transparent 60%);
 }

@@ -37,7 +37,15 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
 
   return (
     <html lang="en" className={inter.variable}>
-      <body className="flex min-h-screen flex-col bg-white font-sans text-ink-900 antialiased">
+      <body className="relative flex min-h-screen flex-col bg-canvas font-sans text-ink-900 antialiased">
+        {/* The colour field, behind every page. Fixed so the page scrolls across
+            the light rather than dragging it along. Decoration only - it never
+            intercepts a click and never reaches a screen reader. */}
+        <div
+          aria-hidden
+          className="bg-canvas-field pointer-events-none fixed inset-0 -z-10"
+        />
+
         <a href="#main" className="skip-link">
           Skip to content
         </a>
