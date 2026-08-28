@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { apiGet, type Enrollment, type Progress } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { ProgressBar } from '@/components/progress-bar';
+import { PageShell, PageHeader, Card, EmptyState, Button, Badge } from '@/components/ui';
 
 export const metadata = { title: 'My learning' };
 
@@ -20,7 +21,7 @@ export default async function MyLearningPage() {
   const res = await apiGet<{ data: Enrollment[] }>('/api/my/enrollments');
   const enrollments = res.ok ? res.data.data : [];
 
-  const withProgress = await Promise.all(
+  const rows = await Promise.all(
     enrollments.map(async (enrollment) => {
       const courseId = enrollment.course?.documentId;
       if (!courseId) return { enrollment, progress: null as Progress | null };
@@ -29,63 +30,99 @@ export default async function MyLearningPage() {
     })
   );
 
-  return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <header className="flex items-baseline justify-between border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-semibold">My learning</h1>
-        <Link href="/dashboard" className="text-sm underline">
-          Dashboard
-        </Link>
-      </header>
+  const finished = rows.filter((r) => r.progress?.percentage === 100).length;
 
-      {withProgress.length === 0 ? (
-        <p className="mt-8 text-sm text-slate-600">
-          You are not enrolled in anything yet.{' '}
-          <Link href="/courses" className="underline">
-            Browse the catalogue
-          </Link>
-          .
-        </p>
+  return (
+    <PageShell>
+      <PageHeader
+        title="My learning"
+        description={
+          rows.length === 0
+            ? undefined
+            : `${rows.length} course${rows.length === 1 ? '' : 's'}${
+                finished > 0 ? ` · ${finished} finished` : ''
+              }`
+        }
+      />
+
+      {rows.length === 0 ? (
+        <div className="mt-8">
+          <EmptyState
+            title="You are not enrolled in anything yet"
+            description="Find a course in the catalogue and enrol to start tracking progress."
+            action={<Button href="/courses">Browse courses</Button>}
+          />
+        </div>
       ) : (
-        <ul className="mt-6 space-y-4">
-          {withProgress.map(({ enrollment, progress }) => {
+        <ul className="mt-8 space-y-4">
+          {rows.map(({ enrollment, progress }, i) => {
             const course = enrollment.course;
             if (!course) return null;
 
             const next = progress?.lessons.find((l) => !l.completed);
+            const complete = progress?.percentage === 100;
 
             return (
-              <li key={enrollment.documentId} className="rounded border border-slate-200 p-4">
-                <div className="flex items-baseline justify-between gap-4">
-                  <Link
-                    href={`/courses/${course.documentId}`}
-                    className="font-medium underline"
-                  >
-                    {course.title}
-                  </Link>
-                  {next && (
-                    <Link
-                      href={`/learn/${course.documentId}/${next.documentId}`}
-                      className="shrink-0 text-sm underline"
-                    >
-                      Continue
-                    </Link>
-                  )}
-                </div>
+              <li
+                key={enrollment.documentId}
+                className="animate-rise"
+                style={{ animationDelay: `${Math.min(i, 8) * 0.06}s` }}
+              >
+                <Card className="p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/courses/${course.documentId}`}
+                        className="font-medium hover:underline"
+                      >
+                        {course.title}
+                      </Link>
+                      {complete && (
+                        <span className="ml-2 align-middle">
+                          <Badge tone="success">Complete</Badge>
+                        </span>
+                      )}
+                    </div>
 
-                {progress && (
-                  <div className="mt-3">
-                    <ProgressBar
-                      percentage={progress.percentage}
-                      label={`${progress.completedLessons} of ${progress.totalLessons} lessons`}
-                    />
+                    {next ? (
+                      <Button
+                        href={`/learn/${course.documentId}/${next.documentId}`}
+                        variant="secondary"
+                        className="shrink-0"
+                      >
+                        {progress?.completedLessons === 0 ? 'Start' : 'Continue'}
+                      </Button>
+                    ) : (
+                      <Button
+                        href={`/courses/${course.documentId}`}
+                        variant="ghost"
+                        className="shrink-0"
+                      >
+                        Review
+                      </Button>
+                    )}
                   </div>
-                )}
+
+                  {progress && (
+                    <div className="mt-4">
+                      <ProgressBar
+                        percentage={progress.percentage}
+                        label={`${progress.completedLessons} of ${progress.totalLessons} lessons`}
+                      />
+                    </div>
+                  )}
+
+                  {next && (
+                    <p className="mt-3 truncate text-micro text-ink-400">
+                      Up next: {next.title}
+                    </p>
+                  )}
+                </Card>
               </li>
             );
           })}
         </ul>
       )}
-    </main>
+    </PageShell>
   );
 }

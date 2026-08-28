@@ -6,7 +6,7 @@ import { createQuizAction, deleteQuizAction, type QuestionInput } from '@/app/ac
 import type { Quiz } from '@/lib/api';
 
 const field =
-  'mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900';
+  'mt-1 w-full rounded border border-ink-300 px-3 py-2 text-small outline-none focus:border-ink-900';
 
 const blankQuestion = (): QuestionInput => ({
   text: '',
@@ -36,23 +36,23 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
   return (
     <div className="mt-4">
       {error && (
-        <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mb-3 rounded bg-danger/5 px-3 py-2 text-small text-danger">
           {error}
         </p>
       )}
 
       {quizzes.length === 0 ? (
-        <p className="text-sm text-slate-600">No quizzes yet.</p>
+        <p className="text-small text-ink-600">No quizzes yet.</p>
       ) : (
         <ul className="space-y-2">
           {quizzes.map((quiz) => (
             <li
               key={quiz.documentId}
-              className="flex items-baseline justify-between gap-4 rounded border border-slate-200 p-3 text-sm"
+              className="flex items-baseline justify-between gap-4 rounded border border-ink-200 p-3 text-small"
             >
               <span>
                 {quiz.title}
-                <span className="ml-2 text-slate-500">
+                <span className="ml-2 text-ink-500">
                   ({quiz.questions?.length ?? 0} questions)
                 </span>
               </span>
@@ -66,7 +66,7 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
                     else router.refresh();
                   })
                 }
-                className="shrink-0 text-red-700 underline disabled:opacity-50"
+                className="shrink-0 text-danger underline disabled:opacity-50"
               >
                 Delete
               </button>
@@ -75,10 +75,10 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
         </ul>
       )}
 
-      <div className="mt-6 space-y-4 rounded border border-slate-200 p-4">
-        <h3 className="text-sm font-medium">Create a quiz</h3>
+      <div className="mt-6 space-y-4 rounded border border-ink-200 p-4">
+        <h3 className="text-small font-medium">Create a quiz</h3>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-small font-medium text-ink-700">
           Quiz title
           <input
             value={title}
@@ -88,12 +88,12 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
         </label>
 
         {questions.map((question, qi) => (
-          <fieldset key={qi} className="rounded border border-slate-200 p-3">
-            <legend className="px-1 text-xs font-medium text-slate-600">
+          <fieldset key={qi} className="rounded border border-ink-200 p-3">
+            <legend className="px-1 text-micro font-medium text-ink-600">
               Question {qi + 1}
             </legend>
 
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-small font-medium text-ink-700">
               Text
               <input
                 value={question.text}
@@ -102,7 +102,7 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
               />
             </label>
 
-            <p className="mt-3 text-xs font-medium text-slate-600">
+            <p className="mt-3 text-micro font-medium text-ink-600">
               Options — select the correct one
             </p>
             {question.options.map((option, oi) => (
@@ -121,12 +121,12 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
                       options: question.options.map((o, i) => (i === oi ? e.target.value : o)),
                     })
                   }
-                  className="w-full rounded border border-slate-300 px-3 py-1.5 text-sm"
+                  className="w-full rounded border border-ink-300 px-3 py-1.5 text-small"
                 />
               </div>
             ))}
 
-            <div className="mt-2 flex gap-3 text-xs">
+            <div className="mt-2 flex gap-3 text-micro">
               <button
                 type="button"
                 onClick={() => update(qi, { options: [...question.options, ''] })}
@@ -138,7 +138,7 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
                 <button
                   type="button"
                   onClick={() => setQuestions((c) => c.filter((_, i) => i !== qi))}
-                  className="text-red-700 underline"
+                  className="text-danger underline"
                 >
                   Remove question
                 </button>
@@ -151,7 +151,7 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
           <button
             type="button"
             onClick={() => setQuestions((c) => [...c, blankQuestion()])}
-            className="text-sm underline"
+            className="text-small underline"
           >
             Add question
           </button>
@@ -173,7 +173,7 @@ export function QuizManager({ courseId, quizzes }: { courseId: string; quizzes: 
               router.refresh();
             })
           }
-          className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded bg-ink-900 px-4 py-2 text-small font-medium text-white disabled:opacity-50"
         >
           {pending ? 'Saving…' : 'Create quiz'}
         </button>

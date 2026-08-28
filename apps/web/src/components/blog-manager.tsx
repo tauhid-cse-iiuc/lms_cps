@@ -10,7 +10,7 @@ import {
 import type { BlogPost } from '@/lib/api';
 
 const field =
-  'mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900';
+  'mt-1 w-full rounded border border-ink-300 px-3 py-2 text-small outline-none focus:border-ink-900';
 
 /**
  * Draft and published states come from Strapi's native Draft & Publish rather
@@ -54,13 +54,13 @@ export function BlogManager({ posts }: { posts: ManagedPost[] }) {
   return (
     <div className="mt-6">
       {error && (
-        <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mb-3 rounded bg-danger/5 px-3 py-2 text-small text-danger">
           {error}
         </p>
       )}
 
       {posts.length === 0 ? (
-        <p className="text-sm text-slate-600">No posts yet.</p>
+        <p className="text-small text-ink-600">No posts yet.</p>
       ) : (
         <ul className="space-y-2">
           {posts.map((post) => {
@@ -68,17 +68,17 @@ export function BlogManager({ posts }: { posts: ManagedPost[] }) {
             return (
               <li
                 key={post.documentId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded border border-slate-200 p-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded border border-ink-200 p-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{post.title}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="truncate text-small font-medium">{post.title}</p>
+                  <p className="text-micro text-ink-500">
                     {published ? 'Published' : 'Draft'}
                     {post.author?.username ? ` · ${post.author.username}` : ''}
                   </p>
                 </div>
 
-                <div className="flex shrink-0 gap-3 text-sm">
+                <div className="flex shrink-0 gap-3 text-small">
                   <button
                     type="button"
                     disabled={pending}
@@ -106,7 +106,7 @@ export function BlogManager({ posts }: { posts: ManagedPost[] }) {
                         else router.refresh();
                       })
                     }
-                    className="text-red-700 underline disabled:opacity-50"
+                    className="text-danger underline disabled:opacity-50"
                   >
                     Delete
                   </button>
@@ -117,25 +117,25 @@ export function BlogManager({ posts }: { posts: ManagedPost[] }) {
         </ul>
       )}
 
-      <form onSubmit={handleCreate} className="mt-8 space-y-3 rounded border border-slate-200 p-4">
-        <h2 className="text-sm font-medium">Write a post</h2>
+      <form onSubmit={handleCreate} className="mt-8 space-y-3 rounded border border-ink-200 p-4">
+        <h2 className="text-small font-medium">Write a post</h2>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-small font-medium text-ink-700">
           Title
           <input name="title" required className={field} />
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-small font-medium text-ink-700">
           Excerpt
           <input name="excerpt" className={field} />
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-small font-medium text-ink-700">
           Body
           <textarea name="body" rows={6} className={field} />
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-small text-ink-700">
           <input name="publish" type="checkbox" />
           Publish immediately
         </label>
@@ -143,7 +143,7 @@ export function BlogManager({ posts }: { posts: ManagedPost[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded bg-ink-900 px-4 py-2 text-small font-medium text-white disabled:opacity-50"
         >
           {pending ? 'Saving…' : 'Create post'}
         </button>

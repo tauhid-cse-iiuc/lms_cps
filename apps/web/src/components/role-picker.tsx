@@ -38,7 +38,7 @@ export function RolePicker({
   return (
     <div className="flex shrink-0 flex-col items-end">
       <div className="flex items-center gap-2">
-        {isSelf && <span className="text-xs text-slate-500">you</span>}
+        {isSelf && <span className="text-micro text-ink-500">you</span>}
         <select
           value={value}
           disabled={pending || isLastAdmin}
@@ -59,7 +59,7 @@ export function RolePicker({
               router.refresh();
             });
           }}
-          className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
+          className="rounded border border-ink-300 px-2 py-1 text-small disabled:opacity-50"
         >
           {ROLES.map((role) => (
             <option key={role.value} value={role.value}>
@@ -70,10 +70,10 @@ export function RolePicker({
       </div>
 
       {isLastAdmin && (
-        <span className="mt-1 text-xs text-slate-500">last administrator</span>
+        <span className="mt-1 text-micro text-ink-500">last administrator</span>
       )}
       {error && (
-        <span role="alert" className="mt-1 max-w-xs text-right text-xs text-red-700">
+        <span role="alert" className="mt-1 max-w-xs text-right text-micro text-danger">
           {error}
         </span>
       )}

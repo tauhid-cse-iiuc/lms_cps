@@ -21,12 +21,12 @@ export function EnrollButton({ courseId }: { courseId: string }) {
             else router.refresh();
           })
         }
-        className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="rounded bg-ink-900 px-4 py-2 text-small font-medium text-white disabled:opacity-50"
       >
         {pending ? 'Enrolling…' : 'Enrol in this course'}
       </button>
       {error && (
-        <p role="alert" className="mt-2 text-sm text-red-700">
+        <p role="alert" className="mt-2 text-small text-danger">
           {error}
         </p>
       )}

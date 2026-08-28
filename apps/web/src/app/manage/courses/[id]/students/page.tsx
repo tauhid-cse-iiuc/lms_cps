@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { apiGet, type Course } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { ProgressBar } from '@/components/progress-bar';
+import { PageShell, PageHeader, Card, EmptyState, ErrorNote } from '@/components/ui';
 
 type Row = {
   studentId: string;
@@ -15,11 +15,12 @@ type Row = {
 };
 
 /**
- * Who is on this course and how far they have got.
+ * Who is on this course and how far each has got.
  *
  * The endpoint carries the is-owner-or-manager policy, so an instructor who does
- * not own this course gets a 403 from the API rather than an empty table - which
- * is the distinction worth showing the user honestly.
+ * not own this course gets a 403 from the API rather than an empty table - and
+ * this page says so, because "not yours" and "nobody enrolled" are different
+ * facts and showing the same blank list for both would be misleading.
  */
 export default async function CourseStudentsPage({
   params,
@@ -30,46 +31,69 @@ export default async function CourseStudentsPage({
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
-  const courseRes = await apiGet<{ data: Course }>(`/api/courses/${id}`);
-  const rosterRes = await apiGet<{ data: Row[] }>(`/api/courses/${id}/students`);
+  const [courseRes, rosterRes] = await Promise.all([
+    apiGet<{ data: Course }>(`/api/courses/${id}`),
+    apiGet<{ data: Row[] }>(`/api/courses/${id}/students`),
+  ]);
 
   const title = courseRes.ok ? courseRes.data.data.title : 'Course';
+  const rows = rosterRes.ok ? rosterRes.data.data : [];
+  const average =
+    rows.length > 0
+      ? Math.round(rows.reduce((a, r) => a + r.percentage, 0) / rows.length)
+      : 0;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <Link href={`/manage/courses/${id}`} className="text-sm text-slate-600 underline">
-        &larr; Back to the course
-      </Link>
-
-      <h1 className="mt-4 text-2xl font-semibold">{title}</h1>
-      <p className="text-sm text-slate-600">Enrolled students</p>
+    <PageShell>
+      <PageHeader
+        title={title}
+        description={
+          rows.length === 0
+            ? 'Enrolled students'
+            : `${rows.length} enrolled · ${average}% average progress`
+        }
+        back={{ href: `/manage/courses/${id}`, label: 'Back to the course' }}
+      />
 
       {!rosterRes.ok ? (
-        <p role="alert" className="mt-6 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-          {rosterRes.status === 403
-            ? 'This is not your course.'
-            : rosterRes.error}
-        </p>
-      ) : rosterRes.data.data.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-600">Nobody has enrolled yet.</p>
+        <div className="mt-6">
+          <ErrorNote>
+            {rosterRes.status === 403
+              ? 'This is not your course. Only its owner, a content manager or an admin can see who is enrolled.'
+              : rosterRes.error}
+          </ErrorNote>
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="mt-8">
+          <EmptyState
+            title="Nobody has enrolled yet"
+            description="Students appear here as soon as they enrol, with their progress."
+          />
+        </div>
       ) : (
-        <ul className="mt-6 space-y-3">
-          {rosterRes.data.data.map((row) => (
-            <li key={row.studentId} className="rounded border border-slate-200 p-4">
-              <div className="flex items-baseline justify-between gap-4">
-                <span className="font-medium">{row.username}</span>
-                <span className="text-xs text-slate-500">{row.email}</span>
-              </div>
-              <div className="mt-3">
-                <ProgressBar
-                  percentage={row.percentage}
-                  label={`${row.completedLessons} of ${row.totalLessons} lessons`}
-                />
-              </div>
+        <ul className="mt-8 space-y-3">
+          {rows.map((row, i) => (
+            <li
+              key={row.studentId}
+              className="animate-rise"
+              style={{ animationDelay: `${Math.min(i, 10) * 0.04}s` }}
+            >
+              <Card className="p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <span className="font-medium">{row.username}</span>
+                  <span className="text-micro text-ink-500">{row.email}</span>
+                </div>
+                <div className="mt-4">
+                  <ProgressBar
+                    percentage={row.percentage}
+                    label={`${row.completedLessons} of ${row.totalLessons} lessons`}
+                  />
+                </div>
+              </Card>
             </li>
           ))}
         </ul>
       )}
-    </main>
+    </PageShell>
   );
 }

@@ -4,16 +4,27 @@ import { apiGet, type Lesson, type Progress } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { ProgressBar } from '@/components/progress-bar';
 import { CompleteLessonButton } from '@/components/complete-lesson-button';
+import { PageShell, EmptyState, Button, Card } from '@/components/ui';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lessonId: string }>;
+}) {
+  const { lessonId } = await params;
+  const res = await apiGet<{ data: Lesson }>(`/api/lessons/${lessonId}`);
+  return { title: res.ok ? res.data.data.title : 'Lesson' };
+}
 
 /**
  * The lesson viewer.
  *
  * Sequence comes from the explicit `order` field, not from id or creation date.
- * Ordering by either of those breaks the moment a lesson is inserted between two
- * existing ones - which is exactly when an instructor is most likely to do it.
+ * Ordering by either breaks the moment a lesson is inserted between two existing
+ * ones - which is exactly when an instructor is most likely to do it.
  *
- * The previous/next links are computed from the progress payload, which already
- * lists every lesson in order, so moving through a course costs no extra request.
+ * Previous and next are computed from the progress payload, which already lists
+ * every lesson in order, so moving through a course costs no extra request.
  */
 export default async function LessonPage({
   params,
@@ -26,19 +37,20 @@ export default async function LessonPage({
 
   const lessonRes = await apiGet<{ data: Lesson }>(`/api/lessons/${lessonId}`);
 
-  // A 403 here is the is-enrolled policy doing its job, not a broken page.
+  // A 403 here is the is-enrolled policy working, not a broken page - so it gets
+  // an explanation and a way forward rather than a generic error.
   if (!lessonRes.ok) {
     if (lessonRes.status === 403) {
       return (
-        <main className="mx-auto max-w-2xl px-6 py-16 text-center">
-          <h1 className="text-xl font-semibold">This lesson is for enrolled students</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Enrol in the course to read its lessons.
-          </p>
-          <Link href={`/courses/${courseId}`} className="mt-4 inline-block text-sm underline">
-            Go to the course
-          </Link>
-        </main>
+        <PageShell width="narrow">
+          <div className="pt-12">
+            <EmptyState
+              title="This lesson is for enrolled students"
+              description="The catalogue is public so you can see what a course covers. The material itself needs an enrolment."
+              action={<Button href={`/courses/${courseId}`}>Go to the course</Button>}
+            />
+          </div>
+        </PageShell>
       );
     }
     notFound();
@@ -46,9 +58,7 @@ export default async function LessonPage({
 
   const lesson = lessonRes.data.data;
 
-  const progressRes = await apiGet<{ data: Progress }>(
-    `/api/courses/${courseId}/progress`
-  );
+  const progressRes = await apiGet<{ data: Progress }>(`/api/courses/${courseId}/progress`);
   const progress = progressRes.ok ? progressRes.data.data : null;
 
   const ordered = progress?.lessons ?? [];
@@ -58,65 +68,100 @@ export default async function LessonPage({
   const isComplete = index >= 0 ? ordered[index].completed : false;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <Link href={`/courses/${courseId}`} className="text-sm text-slate-600 underline">
-        &larr; Back to the course
+    <PageShell>
+      <Link
+        href={`/courses/${courseId}`}
+        className="inline-flex items-center gap-1.5 text-small text-ink-500 transition-colors hover:text-ink-900"
+      >
+        <span aria-hidden>&larr;</span> Back to the course
       </Link>
 
       {progress && (
         <div className="mt-4">
           <ProgressBar
             percentage={progress.percentage}
-            label={`${progress.completedLessons} of ${progress.totalLessons} lessons complete`}
+            size="compact"
+            label={`Lesson ${index + 1} of ${progress.totalLessons}`}
           />
         </div>
       )}
 
-      <h1 className="mt-6 text-2xl font-semibold">
-        {lesson.order}. {lesson.title}
-      </h1>
+      <article className="animate-rise mt-8">
+        <p className="text-micro font-medium uppercase tracking-wide text-brand-600">
+          Lesson {lesson.order}
+        </p>
+        <h1 className="mt-2 text-display font-semibold tracking-tight">
+          {lesson.title}
+        </h1>
 
-      {lesson.videoUrl && (
-        <p className="mt-4 text-sm">
+        {lesson.videoUrl && (
           <a
             href={lesson.videoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline"
+            className="mt-5 inline-flex items-center gap-2 rounded-lg border border-ink-300 px-4 py-2 text-small font-medium transition-colors hover:border-ink-400 hover:bg-ink-50"
           >
-            Watch the video
+            <span aria-hidden>▶</span> Watch the video
+            <span className="sr-only">(opens in a new tab)</span>
           </a>
-        </p>
-      )}
+        )}
 
-      {lesson.content && (
-        <div className="mt-6 whitespace-pre-wrap text-slate-800">{lesson.content}</div>
-      )}
+        {lesson.content && (
+          // `prose`-like spacing done by hand: the content is plain text with
+          // paragraph breaks, so whitespace-pre-line is enough and avoids
+          // pulling in a typography plugin for one field.
+          <div className="mt-7 whitespace-pre-line text-body leading-[1.75] text-ink-700">
+            {lesson.content}
+          </div>
+        )}
+      </article>
 
-      <div className="mt-8 border-t border-slate-200 pt-6">
+      <Card className="mt-10 flex flex-wrap items-center justify-between gap-4 p-5">
         <CompleteLessonButton
           lessonId={lessonId}
           courseId={courseId}
           initiallyComplete={isComplete}
         />
-      </div>
+        {next && isComplete && (
+          <Button href={`/learn/${courseId}/${next.documentId}`} variant="secondary">
+            Next lesson &rarr;
+          </Button>
+        )}
+      </Card>
 
-      <nav className="mt-8 flex justify-between border-t border-slate-200 pt-4 text-sm">
+      <nav
+        aria-label="Lesson navigation"
+        className="mt-8 flex items-stretch justify-between gap-3 border-t border-ink-200 pt-6"
+      >
         {previous ? (
-          <Link href={`/learn/${courseId}/${previous.documentId}`} className="underline">
-            &larr; {previous.title}
+          <Link href={`/learn/${courseId}/${previous.documentId}`} className="max-w-[48%]">
+            <Card interactive className="h-full px-4 py-3">
+              <p className="text-micro text-ink-400">Previous</p>
+              <p className="mt-0.5 truncate text-small font-medium">
+                {previous.title}
+              </p>
+            </Card>
           </Link>
         ) : (
           <span />
         )}
+
         {next ? (
-          <Link href={`/learn/${courseId}/${next.documentId}`} className="underline">
-            {next.title} &rarr;
+          <Link
+            href={`/learn/${courseId}/${next.documentId}`}
+            className="ml-auto max-w-[48%] text-right"
+          >
+            <Card interactive className="h-full px-4 py-3">
+              <p className="text-micro text-ink-400">Next</p>
+              <p className="mt-0.5 truncate text-small font-medium">{next.title}</p>
+            </Card>
           </Link>
         ) : (
-          <span className="text-slate-500">Last lesson</span>
+          <span className="ml-auto self-center text-small text-ink-400">
+            Last lesson
+          </span>
         )}
       </nav>
-    </main>
+    </PageShell>
   );
 }

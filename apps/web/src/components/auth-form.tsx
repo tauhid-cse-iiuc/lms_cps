@@ -2,16 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { motion } from 'motion/react';
 
 type Mode = 'login' | 'register';
 
+const field =
+  'mt-1.5 w-full rounded-lg border border-ink-300 bg-white px-3.5 py-2.5 text-small outline-none transition-colors placeholder:text-ink-400 focus:border-brand-500';
+
 /**
- * The sign-in and sign-up forms are the same form with a different field list,
- * so they share one component.
+ * The sign-in and sign-up forms are the same form with a different field list.
  *
  * Note where this posts: to THIS application, not to Strapi. The browser never
- * sees a token. The route handler on the other end puts it in an httpOnly
- * cookie, which is why there is nothing here that stores a credential.
+ * sees a token - the Route Handler on the other end puts it in an httpOnly
+ * cookie. That is why there is nothing here that stores a credential.
  */
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
@@ -58,19 +61,16 @@ export function AuthForm({ mode }: { mode: Mode }) {
     router.refresh();
   }
 
-  const field =
-    'mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900';
-
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {isRegister && (
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-small font-medium text-ink-700">
           Name
           <input name="username" type="text" required autoComplete="name" className={field} />
         </label>
       )}
 
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-small font-medium text-ink-700">
         Email
         <input
           name={isRegister ? 'email' : 'identifier'}
@@ -81,27 +81,38 @@ export function AuthForm({ mode }: { mode: Mode }) {
         />
       </label>
 
-      <label className="block text-sm font-medium text-slate-700">
+      <label className="block text-small font-medium text-ink-700">
         Password
         <input
           name="password"
           type="password"
           required
+          minLength={isRegister ? 8 : undefined}
           autoComplete={isRegister ? 'new-password' : 'current-password'}
           className={field}
         />
+        {isRegister && (
+          <span className="mt-1 block text-micro font-normal text-ink-500">
+            At least 8 characters.
+          </span>
+        )}
       </label>
 
       {error && (
-        <p role="alert" className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">
+        <motion.p
+          role="alert"
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-danger/25 bg-danger/5 px-3.5 py-2.5 text-small text-danger"
+        >
           {error}
-        </p>
+        </motion.p>
       )}
 
       <button
         type="submit"
         disabled={busy}
-        className="w-full rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="w-full rounded-lg bg-ink-900 px-4 py-2.5 text-small font-medium text-white transition-all hover:bg-ink-800 active:scale-[0.99] disabled:opacity-50"
       >
         {busy ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
       </button>

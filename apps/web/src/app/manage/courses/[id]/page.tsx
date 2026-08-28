@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { apiGet, type Course, type Lesson, type Quiz } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { CourseForm } from '@/components/course-form';
 import { LessonManager } from '@/components/lesson-manager';
 import { QuizManager } from '@/components/quiz-manager';
+import { PageShell, PageHeader, Button } from '@/components/ui';
 
 export default async function ManageCoursePage({
   params,
@@ -30,23 +30,20 @@ export default async function ManageCoursePage({
   const quizzes = quizzesRes.ok ? quizzesRes.data.data : [];
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <div className="flex items-baseline justify-between">
-        <Link href="/manage/courses" className="text-sm text-slate-600 underline">
-          &larr; Your courses
-        </Link>
-        <Link
-          href={`/manage/courses/${id}/students`}
-          className="text-sm underline"
-        >
-          Enrolled students
-        </Link>
-      </div>
+    <PageShell>
+      <PageHeader
+        title={course.title}
+        description="Edit the course, its lessons and its quizzes."
+        back={{ href: '/manage/courses', label: 'Your courses' }}
+        action={
+          <Button href={`/manage/courses/${id}/students`} variant="secondary">
+            Enrolled students
+          </Button>
+        }
+      />
 
-      <h1 className="mt-4 text-2xl font-semibold">{course.title}</h1>
-
-      <section className="mt-6 border-t border-slate-200 pt-6">
-        <h2 className="text-lg font-medium">Course details</h2>
+      <section className="mt-8">
+        <h2 className="text-title font-semibold">Course details</h2>
         <CourseForm
           existing={{
             documentId: course.documentId,
@@ -57,15 +54,15 @@ export default async function ManageCoursePage({
         />
       </section>
 
-      <section className="mt-10 border-t border-slate-200 pt-6">
-        <h2 className="text-lg font-medium">Lessons</h2>
+      <section className="mt-12 border-t border-ink-200 pt-8">
+        <h2 className="text-title font-semibold">Lessons</h2>
         <LessonManager courseId={id} lessons={lessons} />
       </section>
 
-      <section className="mt-10 border-t border-slate-200 pt-6">
-        <h2 className="text-lg font-medium">Quizzes</h2>
+      <section className="mt-12 border-t border-ink-200 pt-8">
+        <h2 className="text-title font-semibold">Quizzes</h2>
         <QuizManager courseId={id} quizzes={quizzes} />
       </section>
-    </main>
+    </PageShell>
   );
 }

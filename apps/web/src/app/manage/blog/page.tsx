@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { apiGet, type BlogPost } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { BlogManager } from '@/components/blog-manager';
+import { PageShell, PageHeader, EmptyState, ErrorNote, Button } from '@/components/ui';
 
 export const metadata = { title: 'Manage blog' };
 
@@ -29,12 +29,15 @@ export default async function ManageBlogPage() {
 
   if (!['admin', 'content-manager'].includes(user.role.type)) {
     return (
-      <main className="mx-auto max-w-2xl px-6 py-16 text-center">
-        <h1 className="text-xl font-semibold">Not available for your role</h1>
-        <Link href="/dashboard" className="mt-4 inline-block text-sm underline">
-          Back to your dashboard
-        </Link>
-      </main>
+      <PageShell width="narrow">
+        <div className="pt-12">
+          <EmptyState
+            title="Not available for your role"
+            description="Writing the blog needs the Content Manager or Admin role."
+            action={<Button href="/dashboard">Back to your dashboard</Button>}
+          />
+        </div>
+      </PageShell>
     );
   }
 
@@ -56,21 +59,24 @@ export default async function ManageBlogPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <header className="flex items-baseline justify-between border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-semibold">Blog posts</h1>
-        <Link href="/blog" className="text-sm underline">
-          View public blog
-        </Link>
-      </header>
+    <PageShell>
+      <PageHeader
+        title="Blog posts"
+        description={`${posts.length} post${posts.length === 1 ? '' : 's'} · ${liveIds.size} published`}
+        action={
+          <Button href="/blog" variant="secondary">
+            View public blog
+          </Button>
+        }
+      />
 
       {!allRes.ok && (
-        <p role="alert" className="mt-6 rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-          {allRes.error}
-        </p>
+        <div className="mt-6">
+          <ErrorNote>{allRes.error}</ErrorNote>
+        </div>
       )}
 
       <BlogManager posts={posts} />
-    </main>
+    </PageShell>
   );
 }

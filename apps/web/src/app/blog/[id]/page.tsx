@@ -1,6 +1,20 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { apiGet, type BlogPost } from '@/lib/api';
+import { PageShell, Badge } from '@/components/ui';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const res = await apiGet<{ data: BlogPost }>(`/api/blog-posts/${id}`);
+  return {
+    title: res.ok ? res.data.data.title : 'Post',
+    description: res.ok ? (res.data.data.excerpt ?? undefined) : undefined,
+  };
+}
 
 export default async function BlogPostPage({
   params,
@@ -15,23 +29,49 @@ export default async function BlogPostPage({
   const post = res.data.data;
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
-      <Link href="/blog" className="text-sm text-slate-600 underline">
-        &larr; Blog
+    <PageShell width="narrow">
+      <Link
+        href="/blog"
+        className="inline-flex items-center gap-1.5 text-small text-ink-500 transition-colors hover:text-ink-900"
+      >
+        <span aria-hidden>&larr;</span> Blog
       </Link>
 
-      <h1 className="mt-4 text-2xl font-semibold">{post.title}</h1>
-      <p className="mt-1 text-xs text-slate-500">
-        {post.author?.username ? `by ${post.author.username}` : null}
-        {post.publishedAt
-          ? ` · ${new Date(post.publishedAt).toLocaleDateString()}`
-          : ' · draft'}
-      </p>
+      <article className="animate-rise mt-6">
+        <div className="flex flex-wrap items-center gap-2 text-micro text-ink-400">
+          {post.author?.username && <span>by {post.author.username}</span>}
+          {post.publishedAt ? (
+            <>
+              <span aria-hidden>·</span>
+              <time dateTime={post.publishedAt}>
+                {new Date(post.publishedAt).toLocaleDateString(undefined, {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </time>
+            </>
+          ) : (
+            <Badge tone="muted">Draft</Badge>
+          )}
+        </div>
 
-      {post.excerpt && <p className="mt-4 text-slate-700">{post.excerpt}</p>}
-      {post.body && (
-        <div className="mt-6 whitespace-pre-wrap text-slate-800">{post.body}</div>
-      )}
-    </main>
+        <h1 className="mt-3 text-display font-semibold leading-tight tracking-tight">
+          {post.title}
+        </h1>
+
+        {post.excerpt && (
+          <p className="mt-4 text-lead leading-relaxed text-ink-600">
+            {post.excerpt}
+          </p>
+        )}
+
+        {post.body && (
+          <div className="mt-8 whitespace-pre-line text-body leading-[1.75] text-ink-700">
+            {post.body}
+          </div>
+        )}
+      </article>
+    </PageShell>
   );
 }

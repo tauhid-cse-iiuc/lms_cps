@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentUser, type RoleType } from '@/lib/auth';
-import { SignOutButton } from '@/components/sign-out-button';
+import { apiGet, type Enrollment, type Course, type AdminStats } from '@/lib/api';
+import { PageShell, Card, Badge } from '@/components/ui';
 
 export const metadata = { title: 'Dashboard' };
 
@@ -19,95 +20,135 @@ export default async function DashboardPage() {
 
   const role = user.role.type as RoleType;
 
+  // A number worth showing, chosen per role. Each is one request, and each is
+  // already permission-scoped by the backend - a student's count cannot include
+  // anybody else's rows however this page is called.
+  let headline: { value: string; label: string } | null = null;
+
+  if (role === 'student') {
+    const res = await apiGet<{ data: Enrollment[] }>('/api/my/enrollments');
+    if (res.ok) {
+      const n = res.data.data.length;
+      headline = { value: String(n), label: `course${n === 1 ? '' : 's'} enrolled` };
+    }
+  } else if (role === 'instructor' || role === 'content-manager') {
+    const res = await apiGet<{ data: Course[] }>('/api/my/courses');
+    if (res.ok) {
+      const n = res.data.data.length;
+      headline = { value: String(n), label: `course${n === 1 ? '' : 's'} you own` };
+    }
+  } else if (role === 'admin') {
+    const res = await apiGet<{ data: AdminStats }>('/api/admin/stats');
+    if (res.ok) {
+      headline = { value: String(res.data.data.totals.users), label: 'users on the platform' };
+    }
+  }
+
+  const panel = PANELS[role];
+
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <header className="flex items-baseline justify-between border-b border-slate-200 pb-4">
+    <PageShell width="wide">
+      <div className="animate-rise flex flex-wrap items-end justify-between gap-6 border-b border-ink-200 pb-6">
         <div>
-          <h1 className="text-2xl font-semibold">{user.username}</h1>
-          <p className="text-sm text-slate-600">
-            Signed in as <span className="font-medium">{user.role.name}</span>
-          </p>
+          <p className="text-small text-ink-500">Signed in as</p>
+          <h1 className="mt-1 text-display font-semibold tracking-tight">
+            {user.username}
+          </h1>
+          <div className="mt-2">
+            <Badge>{user.role.name}</Badge>
+          </div>
         </div>
-        <SignOutButton />
-      </header>
+
+        {headline && (
+          <div className="text-right">
+            <p className="text-hero font-semibold leading-none tabular-nums">
+              {headline.value}
+            </p>
+            <p className="mt-1 text-small text-ink-500">{headline.label}</p>
+          </div>
+        )}
+      </div>
 
       <section className="mt-8">
-        <RolePanel role={role} />
-      </section>
-
-      <section className="mt-10 border-t border-slate-200 pt-6">
-        <h2 className="text-sm font-medium text-slate-600">Everyone</h2>
-        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-          <PanelLink href="/courses" label="Browse all courses" />
-          <PanelLink href="/blog" label="Read the blog" />
+        <h2 className="text-title font-semibold">{panel.heading}</h2>
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+          {panel.links.map(([href, label, description], i) => (
+            <li
+              key={href}
+              className="animate-rise"
+              style={{ animationDelay: `${0.06 * i}s` }}
+            >
+              <Link href={href} className="block h-full">
+                <Card interactive className="h-full p-5">
+                  <p className="font-medium">{label}</p>
+                  <p className="mt-1.5 text-small text-ink-500">{description}</p>
+                </Card>
+              </Link>
+            </li>
+          ))}
         </ul>
       </section>
-    </main>
-  );
-}
 
-function PanelLink({ href, label }: { href: string; label: string }) {
-  return (
-    <li>
-      <Link
-        href={href}
-        className="block rounded border border-slate-200 px-4 py-3 text-sm hover:border-slate-400"
-      >
-        {label}
-      </Link>
-    </li>
+      <section className="mt-10">
+        <h2 className="text-small font-semibold text-ink-500">Everyone</h2>
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+          {[
+            ['/courses', 'Browse all courses'],
+            ['/blog', 'Read the blog'],
+          ].map(([href, label]) => (
+            <li key={href}>
+              <Link href={href}>
+                <Card interactive className="px-4 py-3 text-small">
+                  {label}
+                </Card>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </PageShell>
   );
 }
 
 /**
- * What each role sees. Deliberately a plain lookup: the set of roles is fixed by
- * the backend permission matrix and will not grow at runtime, so anything more
- * dynamic would add indirection without adding flexibility.
+ * What each role sees. A plain lookup: the set of roles is fixed by the backend
+ * permission matrix and will not grow at runtime, so anything more dynamic would
+ * add indirection without adding flexibility.
  */
-function RolePanel({ role }: { role: RoleType }) {
-  const panels: Record<RoleType, { heading: string; links: Array<[string, string]> }> = {
-    admin: {
-      heading: 'Platform administration',
-      links: [
-        ['/dashboard/admin', 'Users, roles and statistics'],
-        ['/manage/courses', 'Manage courses'],
-        ['/manage/blog', 'Manage the blog'],
-      ],
-    },
-    'content-manager': {
-      heading: 'Content management',
-      links: [
-        ['/manage/courses', 'Manage courses and lessons'],
-        ['/manage/blog', 'Write and publish blog posts'],
-      ],
-    },
-    instructor: {
-      heading: 'Your courses',
-      links: [
-        ['/manage/courses', 'Create and edit your courses'],
-        ['/dashboard/learning', 'Courses you are enrolled in'],
-      ],
-    },
-    student: {
-      heading: 'Your learning',
-      links: [
-        ['/dashboard/learning', 'Continue your courses'],
-        ['/dashboard/results', 'Your quiz results'],
-        ['/courses', 'Find something new'],
-      ],
-    },
-  };
-
-  const panel = panels[role];
-
-  return (
-    <>
-      <h2 className="text-lg font-medium">{panel.heading}</h2>
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-        {panel.links.map(([href, label]) => (
-          <PanelLink key={href} href={href} label={label} />
-        ))}
-      </ul>
-    </>
-  );
-}
+const PANELS: Record<
+  RoleType,
+  { heading: string; links: Array<[string, string, string]> }
+> = {
+  admin: {
+    heading: 'Platform administration',
+    links: [
+      ['/dashboard/admin', 'Users, roles and statistics', 'Assign roles, with the last-admin guard.'],
+      ['/manage/courses', 'Manage courses', 'Create and edit any course on the platform.'],
+      ['/manage/blog', 'Manage the blog', 'Write posts and control what is published.'],
+      ['/dashboard/learning', 'Your own learning', 'Courses you have enrolled in yourself.'],
+    ],
+  },
+  'content-manager': {
+    heading: 'Content management',
+    links: [
+      ['/manage/courses', 'Courses and lessons', 'Create and edit any course, not only your own.'],
+      ['/manage/blog', 'Blog posts', 'Write, publish and unpublish.'],
+      ['/dashboard/learning', 'Your own learning', 'Courses you have enrolled in yourself.'],
+    ],
+  },
+  instructor: {
+    heading: 'Your courses',
+    links: [
+      ['/manage/courses', 'Create and edit courses', 'Your own courses, their lessons and quizzes.'],
+      ['/dashboard/learning', 'Courses you are taking', 'Your progress as a student.'],
+    ],
+  },
+  student: {
+    heading: 'Your learning',
+    links: [
+      ['/dashboard/learning', 'Continue a course', 'Pick up where you left off.'],
+      ['/dashboard/results', 'Quiz results', 'Every attempt, kept as it was marked.'],
+      ['/courses', 'Find something new', 'Browse the full catalogue.'],
+    ],
+  },
+};
