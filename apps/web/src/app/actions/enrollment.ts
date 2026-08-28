@@ -54,3 +54,25 @@ export async function uncompleteLessonAction(
 
   return { ok: true as const };
 }
+
+/**
+ * Clears the caller's completions for one course.
+ *
+ * There is no parameter for WHOSE progress to reset - the backend derives that
+ * from the token - so there is no version of this call that touches somebody
+ * else's record. Enrolment and past quiz attempts are deliberately left intact;
+ * see the controller for why.
+ */
+export async function resetCourseProgressAction(courseDocumentId: string) {
+  const res = await apiDelete<{ data: { cleared: number } }>(
+    `/api/courses/${courseDocumentId}/progress`
+  );
+
+  if (!res.ok) return { ok: false as const, error: res.error };
+
+  revalidatePath(`/courses/${courseDocumentId}`);
+  revalidatePath('/dashboard/learning');
+  revalidatePath('/dashboard');
+
+  return { ok: true as const, cleared: res.data?.data?.cleared ?? 0 };
+}

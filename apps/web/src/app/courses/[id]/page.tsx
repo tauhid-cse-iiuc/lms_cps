@@ -4,6 +4,7 @@ import { apiGet, type Course, type Enrollment, type Progress, type Quiz } from '
 import { getCurrentUser } from '@/lib/auth';
 import { ProgressBar } from '@/components/progress-bar';
 import { EnrollButton } from '@/components/enroll-button';
+import { ResetProgressButton } from '@/components/reset-progress-button';
 import { PageShell, Card, Badge, Button } from '@/components/ui';
 
 export async function generateMetadata({
@@ -162,6 +163,13 @@ export default async function CoursePage({
               </li>
             ))}
           </ol>
+
+          <div className="mt-6 border-t border-ink-200 pt-5">
+            <ResetProgressButton
+              courseId={course.documentId}
+              completedLessons={progress.completedLessons}
+            />
+          </div>
         </section>
       )}
 

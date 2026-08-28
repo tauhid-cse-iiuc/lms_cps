@@ -245,4 +245,53 @@ module.exports = createCoreController('api::course.course', ({ strapi }) => ({
 
     return { data: rows };
   },
+
+  /**
+   * DELETE /api/courses/:id/progress
+   *
+   * Clears the CALLER's lesson completions for one course, so they can work
+   * through it again from the beginning.
+   *
+   * Three deliberate limits on what this touches.
+   *
+   * It only ever affects the person making the request. There is no parameter
+   * for whose progress to reset, so there is no version of this call that
+   * deletes somebody else's - an instructor cannot wipe a student's record, and
+   * neither can another student.
+   *
+   * It leaves the ENROLMENT alone. Resetting progress and un-enrolling are
+   * different intentions, and doing both here would surprise anyone who only
+   * wanted the first.
+   *
+   * It leaves QUIZ ATTEMPTS alone. Those are a historical record of what
+   * somebody scored at a moment in time - the results page promises they are
+   * kept exactly as marked, and quietly deleting them here would make that
+   * promise false. Retaking a quiz adds an attempt; it does not erase one.
+   */
+  async resetProgress(ctx) {
+    const user = ctx.state.user;
+
+    const course = await strapi.documents('api::course.course').findOne({
+      documentId: ctx.params.id,
+    });
+
+    if (!course) return ctx.notFound('That course does not exist.');
+
+    const completions = await strapi.db
+      .query('api::lesson-completion.lesson-completion')
+      .findMany({ where: { student: user.id, course: course.id } });
+
+    for (const completion of completions) {
+      await strapi.db
+        .query('api::lesson-completion.lesson-completion')
+        .delete({ where: { id: completion.id } });
+    }
+
+    return {
+      data: {
+        courseId: course.documentId,
+        cleared: completions.length,
+      },
+    };
+  },
 }));

@@ -736,6 +736,15 @@ export interface ApiQuizQuiz extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
     questions: Schema.Attribute.Component<'quiz.question', true>;
+    timeLimitSeconds: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 7200;
+          min: 30;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<600>;
     title: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.SetMinMaxLength<{

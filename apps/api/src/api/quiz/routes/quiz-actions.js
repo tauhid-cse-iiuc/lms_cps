@@ -11,6 +11,11 @@ module.exports = {
   routes: [
     {
       method: 'POST',
+      path: '/quizzes/:id/start',
+      handler: 'quiz.start',
+    },
+    {
+      method: 'POST',
       path: '/quizzes/:id/submit',
       handler: 'quiz.submit',
     },

@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { apiGet, type Quiz } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
-import { QuizForm } from '@/components/quiz-form';
+import { AssessmentRunner } from '@/components/assessment-runner';
 import { PageShell, PageHeader, EmptyState, Button } from '@/components/ui';
 
 export async function generateMetadata({
@@ -63,7 +63,7 @@ export default async function QuizPage({
     <PageShell width="narrow">
       <PageHeader
         title={quiz.title}
-        description={`${questions.length} question${questions.length === 1 ? '' : 's'} · marked by the server`}
+        description={`${questions.length} question${questions.length === 1 ? '' : 's'} · timed · marked by the server`}
       />
 
       {questions.length === 0 ? (
@@ -74,7 +74,11 @@ export default async function QuizPage({
           />
         </div>
       ) : (
-        <QuizForm quizId={quiz.documentId} questions={questions} />
+        <AssessmentRunner
+          quizId={quiz.documentId}
+          quizTitle={quiz.title}
+          questions={questions}
+        />
       )}
     </PageShell>
   );

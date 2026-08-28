@@ -63,6 +63,8 @@ const COURSE_STUDENTS = `${COURSE}.students`; //  GET  /api/courses/:id/students
 const ENROLLMENT_MINE = `${ENROLLMENT}.mine`; //  GET  /api/my/enrollments
 const ATTEMPT_MINE = `${ATTEMPT}.mine`; //        GET  /api/my/quiz-attempts
 const QUIZ_SUBMIT = `${QUIZ}.submit`; //          POST /api/quizzes/:id/submit
+const QUIZ_START = `${QUIZ}.start`; //            POST /api/quizzes/:id/start
+const COURSE_RESET = `${COURSE}.resetProgress`; // DELETE /api/courses/:id/progress
 
 // The admin panel. This api has no content type behind it - the endpoints report
 // on the data rather than exposing a table - but the action strings are formed
@@ -146,7 +148,10 @@ const ROLES = [
       ...on(ATTEMPT, READ),
       COURSE_MINE,
       COURSE_PROGRESS,
+      COURSE_RESET,
       COURSE_STUDENTS,
+      QUIZ_START,
+      QUIZ_SUBMIT,
       // Admin only, and additionally guarded by the is-admin policy on each
       // route - these are where being wrong means somebody promotes themselves.
       ADMIN_STATS,
@@ -205,7 +210,10 @@ const ROLES = [
       // Their own courses, and how their students are doing on them.
       COURSE_MINE,
       COURSE_PROGRESS,
+      COURSE_RESET,
       COURSE_STUDENTS,
+      QUIZ_START,
+      QUIZ_SUBMIT,
     ],
   },
 
@@ -247,8 +255,12 @@ const ROLES = [
       // creates an attempt. Note QUIZ_SUBMIT is the ONLY route by which an
       // attempt can be written, and it grades server-side.
       COURSE_PROGRESS,
+      COURSE_RESET,
       ENROLLMENT_MINE,
       ATTEMPT_MINE,
+      // Both halves of a timed attempt. start issues the signed clock; submit
+      // refuses to grade anything without it.
+      QUIZ_START,
       QUIZ_SUBMIT,
     ],
   },

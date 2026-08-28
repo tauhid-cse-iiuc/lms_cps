@@ -104,6 +104,7 @@ export type Quiz = {
   id: number;
   documentId: string;
   title: string;
+  timeLimitSeconds?: number;
   questions: Array<{
     id?: number;
     text: string;

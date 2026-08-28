@@ -10,6 +10,7 @@
 
 const { createCoreController } = require('@strapi/strapi').factories;
 const { roleOf, isManager } = require('../../../utils/authorization');
+const attemptToken = require('../../../utils/attempt-token');
 
 /**
  * Anyone who is not staff and does not own the course.
@@ -89,6 +90,55 @@ module.exports = createCoreController('api::quiz.quiz', ({ strapi }) => ({
   },
 
   /**
+   * POST /api/quizzes/:id/start
+   *
+   * Begins a timed attempt and hands back a signed token recording when it
+   * began. The countdown the candidate sees is drawn from this, but it is not
+   * what enforces the limit - see submit, which checks the token itself. A timer
+   * that exists only in the browser is a courtesy, not a rule.
+   */
+  async start(ctx) {
+    const user = ctx.state.user;
+
+    const quiz = await strapi.documents('api::quiz.quiz').findOne({
+      documentId: ctx.params.id,
+      populate: { course: true, questions: true },
+    });
+
+    if (!quiz) return ctx.notFound('That quiz does not exist.');
+
+    const questions = quiz.questions ?? [];
+    if (questions.length === 0) {
+      return ctx.badRequest('That quiz has no questions yet.');
+    }
+
+    if (roleOf(ctx) === 'student') {
+      const enrolled = await strapi.db.query('api::enrollment.enrollment').count({
+        where: { student: user.id, course: quiz.course?.id },
+      });
+      if (enrolled === 0) return ctx.forbidden('Enrol in this course first.');
+    }
+
+    const timeLimitSeconds = quiz.timeLimitSeconds ?? 600;
+    const issued = attemptToken.issue({
+      quizId: quiz.documentId,
+      userId: user.id,
+      timeLimitSeconds,
+    });
+
+    return {
+      data: {
+        token: issued.token,
+        timeLimitSeconds,
+        // Absolute, so a clock skewed on the candidate's machine cannot buy them
+        // extra minutes - the browser counts down to a server-stated instant.
+        expiresAt: new Date(issued.expiresAt).toISOString(),
+        questionCount: questions.length,
+      },
+    };
+  },
+
+  /**
    * POST /api/quizzes/:id/submit
    *
    * ---------------------------------------------------------------------------
@@ -125,6 +175,7 @@ module.exports = createCoreController('api::quiz.quiz', ({ strapi }) => ({
   async submit(ctx) {
     const user = ctx.state.user;
     const submitted = ctx.request.body?.answers ?? ctx.request.body?.data?.answers;
+    const startToken = ctx.request.body?.token;
 
     if (!Array.isArray(submitted)) {
       return ctx.badRequest('Send an "answers" array of selected option indexes.');
@@ -144,6 +195,26 @@ module.exports = createCoreController('api::quiz.quiz', ({ strapi }) => ({
 
     if (total === 0) {
       return ctx.badRequest('That quiz has no questions yet.');
+    }
+
+    // The timer is enforced HERE, against the signed token, because this is the
+    // only clock the candidate cannot reach. A missing or altered token is
+    // refused outright rather than silently treated as untimed.
+    const timeLimitSeconds = quiz.timeLimitSeconds ?? 600;
+    const check = attemptToken.verify(startToken, {
+      quizId: quiz.documentId,
+      userId: user.id,
+    });
+
+    if (!check.valid) {
+      const message =
+        check.reason === 'expired'
+          ? 'Your time ran out. Start the assessment again to retry.'
+          : check.reason === 'missing'
+            ? 'Start the assessment before submitting it.'
+            : 'That assessment session is not valid. Start it again.';
+
+      return ctx.badRequest(message, { reason: check.reason, timeLimitSeconds });
     }
 
     if (submitted.length !== total) {

@@ -22,6 +22,12 @@ module.exports = {
       handler: 'course.progress',
     },
     {
+      // Clears only the caller's own completions - see the controller.
+      method: 'DELETE',
+      path: '/courses/:id/progress',
+      handler: 'course.resetProgress',
+    },
+    {
       method: 'GET',
       path: '/courses/:id/students',
       handler: 'course.students',
