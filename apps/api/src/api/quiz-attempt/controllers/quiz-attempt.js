@@ -11,6 +11,7 @@
 
 const { createCoreController } = require('@strapi/strapi').factories;
 const { roleOf, isManager } = require('../../../utils/authorization');
+const { scopedFind } = require('../../../utils/scoped-find');
 
 module.exports = createCoreController('api::quiz-attempt.quiz-attempt', ({ strapi }) => ({
   /**
@@ -24,16 +25,18 @@ module.exports = createCoreController('api::quiz-attempt.quiz-attempt', ({ strap
     const user = ctx.state.user;
     const role = roleOf(ctx);
 
-    if (!isManager(ctx)) {
-      const scope =
-        role === 'instructor'
-          ? { quiz: { course: { owner: user.id } } }
-          : { student: user.id };
+    if (isManager(ctx)) return super.find(ctx);
 
-      ctx.query = { ...ctx.query, filters: scope };
-    }
+    // Built from the token, never from the client. Setting this on
+    // ctx.query.filters and calling super.find() answers 400 "Invalid key
+    // student" - the content API validates filters against what the caller
+    // may READ, and this relation points at the user type. See scoped-find.
+    const scope =
+      role === 'instructor'
+        ? { quiz: { course: { owner: user.id } } }
+        : { student: user.id };
 
-    return super.find(ctx);
+    return scopedFind(strapi, ctx, this, 'api::quiz-attempt.quiz-attempt', scope, { quiz: true, student: true });
   },
 
   async findOne(ctx) {

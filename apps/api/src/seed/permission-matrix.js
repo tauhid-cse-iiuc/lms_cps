@@ -51,6 +51,24 @@ const CRUD = [...READ, ...WRITE];
 /** Expands a content type and a list of methods into action strings. */
 const on = (uid, methods) => methods.map((method) => `${uid}.${method}`);
 
+/**
+ * What any signed-in account needs in order to LEARN, as opposed to teach or
+ * administer.
+ *
+ * Staff hold these too. An instructor taking somebody else's course, or an admin
+ * working through one to see what a student sees, is an ordinary thing to want -
+ * and both dashboards link to it. Granting the reads without these made
+ * "Courses you are taking" a link to a page that could never fill up.
+ *
+ * Safe to hand out, because the promotion in the enrollment controller only
+ * moves an account UP from the default role: an instructor who enrols stays an
+ * instructor.
+ */
+const LEARNER = [
+  ...on(ENROLLMENT, ['create']),
+  ...on(COMPLETION, ['create', 'delete']),
+];
+
 // Custom endpoints, beyond the five a factory controller generates.
 //
 // These could only be added here once their controller method AND their route
@@ -72,6 +90,9 @@ const COURSE_RESET = `${COURSE}.resetProgress`; // DELETE /api/courses/:id/progr
 const ADMIN_STATS = 'api::admin-panel.admin-panel.stats'; //          GET /api/admin/stats
 const ADMIN_USERS = 'api::admin-panel.admin-panel.users'; //          GET /api/admin/users
 const ADMIN_SET_ROLE = 'api::admin-panel.admin-panel.setUserRole'; // PUT /api/admin/users/:id/role
+
+// Answers before the caller has an account, so it belongs to Public.
+const ACCOUNT_AVAILABILITY = 'api::account.account.availability'; // GET /api/account/availability
 
 // Publishing is a named action rather than a field - see the blog-post
 // controller. Granted alongside blog writes, and narrowed by owns-blog-post.
@@ -131,6 +152,8 @@ const ROLES = [
       'Full platform control, including user management and role assignment. This is an application role, not a Strapi admin-panel role - an Admin has no access to /admin.',
     permissions: [
       ...SESSION,
+      ...LEARNER,
+      ENROLLMENT_MINE,
       ...USER_READ,
       ...USER_WRITE,
       ...on(COURSE, CRUD),
@@ -168,6 +191,8 @@ const ROLES = [
     description: 'Creates and manages all course content and blog posts, but cannot manage users.',
     permissions: [
       ...SESSION,
+      ...LEARNER,
+      ENROLLMENT_MINE,
       // Any course, not just their own - that is what separates a Content
       // Manager from an Instructor.
       ...on(COURSE, CRUD),
@@ -193,6 +218,8 @@ const ROLES = [
     description: 'Creates and manages their own courses, lessons and quizzes, and sees the progress of students enrolled in them.',
     permissions: [
       ...SESSION,
+      ...LEARNER,
+      ENROLLMENT_MINE,
       // Narrowed by is-owner-or-manager: writes are rejected unless
       // course.owner is the authenticated user.
       ...on(COURSE, CRUD),
@@ -214,6 +241,35 @@ const ROLES = [
       COURSE_STUDENTS,
       QUIZ_START,
       QUIZ_SUBMIT,
+    ],
+  },
+
+  {
+    /**
+     * Where every new account starts.
+     *
+     * It is NOT Strapi's built-in Public role, and that distinction matters.
+     * Public is the role used for unauthenticated requests; a signed-in user
+     * holding it would have no user.me, no auth.logout and no role.find, so
+     * getCurrentUser would answer 403 and the application would decide they were
+     * signed out - the exact failure the SESSION grants exist to prevent.
+     *
+     * So this is a real role with a real session, holding only what a browsing
+     * visitor needs: read the catalogue, read the blog, and enrol. Enrolling in
+     * anything promotes the account to Student - see the enrollment controller.
+     */
+    type: 'visitor',
+    name: 'Visitor',
+    description:
+      'A signed-in account that has not enrolled in anything yet. Enrolling in any course promotes it to Student automatically.',
+    permissions: [
+      ...SESSION,
+      // The same public reading a signed-out visitor gets...
+      ...on(COURSE, READ),
+      ...on(BLOG, READ),
+      // ...plus the one action that changes their status.
+      ...on(ENROLLMENT, ['find', 'findOne', 'create']),
+      ENROLLMENT_MINE,
     ],
   },
 
@@ -281,6 +337,8 @@ const ROLES = [
       // for drafts with ?status=draft - so the controller pins the status for
       // unauthenticated callers rather than trusting the query string.
       ...on(BLOG, READ),
+      // The sign-up form needs this before its user exists.
+      ACCOUNT_AVAILABILITY,
     ],
   },
 
@@ -297,11 +355,22 @@ const ROLES = [
   },
 ];
 
-/** The role new self-registered users receive. Anyone signing up is a Student. */
-const DEFAULT_ROLE_TYPE = 'student';
+/**
+ * The role new self-registered accounts receive.
+ *
+ * Deliberately not Student: signing up is not the same as being a learner, and
+ * an account that has never enrolled in anything has no business holding lesson
+ * or quiz permissions. Enrolling is what makes someone a Student, and the
+ * enrollment controller performs that promotion.
+ */
+const DEFAULT_ROLE_TYPE = 'visitor';
+
+/** What a Visitor becomes the moment they enrol in anything. */
+const PROMOTED_ROLE_TYPE = 'student';
 
 module.exports = {
   ROLES,
   MANAGED_CONTENT_TYPES,
   DEFAULT_ROLE_TYPE,
+  PROMOTED_ROLE_TYPE,
 };
