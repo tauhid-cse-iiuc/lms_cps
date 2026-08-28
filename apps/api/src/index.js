@@ -31,15 +31,22 @@ module.exports = {
       beforeCreate(event) {
         if (signupPolicy.isBypassing()) return;
 
-        const email = event.params?.data?.email;
-        if (signupPolicy.isAllowed(email)) return;
+        const { email, provider } = event.params?.data ?? {};
+
+        // Third-party sign-ins are exempt: Google has already authenticated the
+        // person and told us which address is theirs, including Workspace
+        // addresses on a company domain. The domain list is a proxy for "this
+        // address probably exists", and a verified provider is better evidence
+        // than the list could ever be.
+        if (signupPolicy.isAllowed(email, provider)) return;
 
         // ApplicationError surfaces as a 400 with this message rather than a
         // 500 with a stack trace, so the person signing up is told what is
         // wrong instead of being shown an internal failure.
         const { errors } = require('@strapi/utils');
         throw new errors.ApplicationError(
-          `Sign-up is limited to ${signupPolicy.describeAllowed()} addresses.`
+          `Sign-up with a password is limited to ${signupPolicy.describeAllowed()} addresses. ` +
+            'You can also sign in with Google using any address.'
         );
       },
     });

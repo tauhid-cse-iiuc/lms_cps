@@ -82,7 +82,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         />
         {isRegister && (
           <span className="mt-1 block text-micro font-normal text-ink-500">
-            Google addresses only.
+            Gmail only for password sign-up — or use Google below for any address.
           </span>
         )}
       </label>

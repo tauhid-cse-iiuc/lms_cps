@@ -18,6 +18,24 @@
  * after the profile comes back from Google.
  *
  * ---------------------------------------------------------------------------
+ * WHAT THE DOMAIN RULE ACTUALLY GUARDS
+ * ---------------------------------------------------------------------------
+ * The rule exists because a PASSWORD sign-up proves nothing about the address.
+ * Anyone can type someone else's email into the form; this application sends no
+ * confirmation mail, so a typed address is an unverified claim. Limiting those
+ * to Google domains is a cheap proxy for "an address that plausibly exists".
+ *
+ * A third-party sign-in is a different situation entirely. By the time the
+ * provider callback runs, Google has already authenticated the person and told
+ * us which address is theirs - including Workspace addresses on a company
+ * domain. Re-applying a gmail.com filter there would reject accounts that are
+ * BETTER verified than any password sign-up, which is the wrong way round.
+ *
+ * So the domain list applies to `provider: 'local'` only. The register
+ * controller hardcodes that value after picking the allowed keys, so it is not
+ * something a client can set to slip past the check.
+ *
+ * ---------------------------------------------------------------------------
  * THE BYPASS
  * ---------------------------------------------------------------------------
  * The seed creates four demo accounts on @lms.test, which the policy would
@@ -57,13 +75,22 @@ const domainOf = (email) =>
     ? email.split('@').pop().trim().toLowerCase()
     : null;
 
-const isAllowed = (email) => {
+/**
+ * May this address become an account?
+ *
+ * `provider` is the identity source. Anything other than 'local' means an
+ * external provider already verified the address, so the domain list does not
+ * apply - see the note above.
+ */
+const isAllowed = (email, provider = 'local') => {
+  if (provider && provider !== 'local') return true;
+
   const domain = domainOf(email);
   if (!domain) return false;
   return allowedDomains().includes(domain);
 };
 
-/** Human-readable, for the message a rejected sign-up actually sees. */
+/** Human-readable, for the message a rejected password sign-up actually sees. */
 const describeAllowed = () => {
   const domains = allowedDomains().map((d) => `@${d}`);
   if (domains.length === 1) return domains[0];
