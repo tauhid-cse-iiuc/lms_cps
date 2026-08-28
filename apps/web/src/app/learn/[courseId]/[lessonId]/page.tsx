@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { apiGet, type Lesson, type Progress } from '@/lib/api';
+import { apiGet, type Lesson, type Progress, type Quiz } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { ProgressBar } from '@/components/progress-bar';
 import { CompleteLessonButton } from '@/components/complete-lesson-button';
@@ -60,6 +60,14 @@ export default async function LessonPage({
 
   const progressRes = await apiGet<{ data: Progress }>(`/api/courses/${courseId}/progress`);
   const progress = progressRes.ok ? progressRes.data.data : null;
+
+  // The course assessment, if it has one. Fetched here so the end of the last
+  // lesson can point at it - "Last lesson" was a dead end that told the student
+  // the course was over while the quiz they still had to take sat unmentioned.
+  const quizRes = await apiGet<{ data: Quiz[] }>(
+    `/api/quizzes?filters[course][documentId][$eq]=${courseId}`
+  );
+  const assessment = quizRes.ok ? quizRes.data.data[0] : undefined;
 
   const ordered = progress?.lessons ?? [];
   const index = ordered.findIndex((l) => l.documentId === lessonId);
@@ -127,6 +135,11 @@ export default async function LessonPage({
             Next lesson &rarr;
           </Button>
         )}
+        {!next && assessment && (
+          <Button href={`/quiz/${assessment.documentId}`}>
+            Take the assessment &rarr;
+          </Button>
+        )}
       </Card>
 
       <nav
@@ -154,6 +167,17 @@ export default async function LessonPage({
             <Card interactive className="h-full px-4 py-3">
               <p className="text-micro text-ink-400">Next</p>
               <p className="mt-0.5 truncate text-small font-medium">{next.title}</p>
+            </Card>
+          </Link>
+        ) : assessment ? (
+          <Link href={`/quiz/${assessment.documentId}`} className="ml-auto max-w-[48%] text-right">
+            <Card interactive className="h-full border-brand-200 bg-brand-50/60 px-4 py-3">
+              <p className="text-micro font-semibold text-brand-600">
+                Final step
+              </p>
+              <p className="mt-0.5 truncate text-small font-medium">
+                {assessment.title}
+              </p>
             </Card>
           </Link>
         ) : (

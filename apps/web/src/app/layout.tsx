@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         </a>
 
         <SiteHeader
-          user={user ? { username: user.username, role: user.role } : null}
+          user={user ? { username: user.username, email: user.email, role: user.role } : null}
         />
 
         <div id="main" tabIndex={-1} className="flex-1">

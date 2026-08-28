@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { RoleType } from '@/lib/auth';
 import { SearchBox } from '@/components/search-box';
+import { UserMenu } from '@/components/user-menu';
 
 type NavLink = { href: string; label: string };
 
@@ -21,7 +22,7 @@ type NavLink = { href: string; label: string };
 export function SiteHeader({
   user,
 }: {
-  user: { username: string; role: { type: RoleType; name: string } } | null;
+  user: { username: string; email?: string; role: { type: RoleType; name: string } } | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -118,19 +119,9 @@ export function SiteHeader({
 
         <div className="ml-auto flex items-center gap-3 lg:ml-3">
           {user ? (
-            <>
-              <span className="hidden text-micro text-ink-500 sm:inline">
-                {user.username} · {user.role.name}
-              </span>
-              <button
-                type="button"
-                onClick={signOut}
-                disabled={busy}
-                className="hidden rounded-md px-3 py-1.5 text-small text-ink-500 transition-colors hover:text-ink-900 disabled:opacity-50 md:inline-block"
-              >
-                {busy ? 'Signing out…' : 'Sign out'}
-              </button>
-            </>
+            <div className="hidden md:block">
+              <UserMenu user={user} />
+            </div>
           ) : (
             <Link
               href="/login"
@@ -207,6 +198,17 @@ export function SiteHeader({
                   </Link>
                 </motion.li>
               ))}
+
+              {user && (
+                <li>
+                  <Link
+                    href="/account"
+                    className="block rounded-md px-3 py-2 text-small text-ink-600"
+                  >
+                    Account settings
+                  </Link>
+                </li>
+              )}
 
               <li className="border-t border-ink-200 pt-2">
                 {user ? (
