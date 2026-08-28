@@ -41,12 +41,19 @@ module.exports = async (strapi) => {
   }
 
   /**
-   * Where Google sends the browser after consent.
+   * Where the plugin sends the BROWSER once it has finished with Google.
    *
-   * This is OUR frontend, not Strapi: the plugin redirects there with an
-   * access_token in the query, and the frontend then exchanges it for a session.
-   * It has to match a redirect URI registered in the Google console exactly -
-   * a trailing slash or a wrong scheme is the usual cause of redirect_uri_mismatch.
+   * The key is `callback`, and that name is worth being exact about, because
+   * getting it wrong fails late and confusingly. The plugin reads
+   * `effectiveConfig.callback` (utils/oauth-connect/index.js:231) and throws
+   * "Provider callback URL is not configured" if it is missing - but only AFTER
+   * Google has already accepted the consent and sent the user back, so the flow
+   * looks like it is working right up until the final hop.
+   *
+   * `callbackUrl` and `redirect_uri` are NOT read here. The URI handed to
+   * Google is computed by the plugin itself from server.absoluteUrl - see
+   * services/providers.js buildRedirectUri - so it cannot be configured from
+   * this file and does not need to be.
    */
   const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(
     /\/+$/,
@@ -59,10 +66,9 @@ module.exports = async (strapi) => {
     icon: 'google',
     key: clientId,
     secret: clientSecret,
-    // Strapi's own callback, where Google returns first.
-    callbackUrl: `${strapi.config.get('server.absoluteUrl')}/api/connect/google/callback`,
     scope: ['email', 'profile'],
-    redirect_uri: `${frontendUrl}/connect/google/redirect`,
+    // The one the plugin actually reads.
+    callback: `${frontendUrl}/connect/google/redirect`,
   };
 
   const current = grant.google ?? {};
@@ -70,8 +76,7 @@ module.exports = async (strapi) => {
     current.enabled === desired.enabled &&
     current.key === desired.key &&
     current.secret === desired.secret &&
-    current.redirect_uri === desired.redirect_uri &&
-    current.callbackUrl === desired.callbackUrl;
+    current.callback === desired.callback;
 
   if (unchanged) return { enabled: true, changed: false };
 

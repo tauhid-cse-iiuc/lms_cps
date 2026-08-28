@@ -26,10 +26,22 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const accessToken = url.searchParams.get('access_token');
 
+  // The plugin redirects here with error/error_description when the exchange
+  // fails - a denied consent, an expired state, a mismatched redirect URI. It
+  // is worth passing that through rather than flattening every failure into one
+  // message: "OAuth2 state mismatch" and "user denied access" need different
+  // responses from whoever is reading it.
+  const oauthError = url.searchParams.get('error');
+  const oauthDetail = url.searchParams.get('error_description');
+
   const fail = (reason: string) =>
     NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(reason)}`, url.origin)
     );
+
+  if (oauthError) {
+    return fail(oauthDetail || `Google sign-in failed (${oauthError}).`);
+  }
 
   if (!accessToken) return fail('Google sign-in was cancelled.');
 
