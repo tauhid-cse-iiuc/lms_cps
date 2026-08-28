@@ -64,6 +64,13 @@
   --color-surface-sunken: oklch(0.985 0.004 260);
   --color-surface-raised: oklch(1 0 0);
 
+  /* The dark end. Deep and slightly blue rather than neutral black, so it reads
+     as a material and not as an absence of light. */
+  --color-night-700: oklch(0.28 0.03 265);
+  --color-night-800: oklch(0.22 0.035 265);
+  --color-night-900: oklch(0.16 0.03 265);
+  --color-night-950: oklch(0.12 0.025 265);
+
   /* Shadows tinted with the ink hue rather than pure black. Black shadows on a
      warm-grey page read as dirt; tinted ones read as depth. */
   --shadow-soft: 0 1px 2px oklch(0.18 0.02 250 / 0.04),
@@ -78,10 +85,11 @@
   --text-micro: 0.75rem;
   --text-small: 0.875rem;
   --text-body: 1rem;
-  --text-lead: 1.125rem;
-  --text-title: 1.375rem;
-  --text-display: 1.875rem;
-  --text-hero: 2.5rem;
+  --text-lead: 1.1875rem;
+  --text-title: 1.5rem;
+  --text-display: 2.25rem;
+  --text-hero: 3.5rem;
+  --text-mega: 4.5rem;
 
   --radius-card: 0.75rem;
 
@@ -184,8 +192,8 @@ h3 {
     var(--color-ink-300) 0.8px,
     transparent 0.8px
   );
-  background-size: 18px 18px;
-  opacity: 0.35;
+  background-size: 22px 22px;
+  opacity: 0.6;
 }
 
 /*
@@ -194,9 +202,49 @@ h3 {
  */
 .bg-aurora {
   background:
-    radial-gradient(42rem 26rem at 12% -8%, var(--color-brand-100), transparent 62%),
-    radial-gradient(34rem 22rem at 88% 4%, var(--color-violet-100), transparent 58%),
-    radial-gradient(30rem 20rem at 60% 100%, var(--color-teal-100), transparent 60%);
+    radial-gradient(38rem 24rem at 10% -6%, var(--color-brand-300), transparent 60%),
+    radial-gradient(32rem 22rem at 92% 2%, var(--color-violet-500), transparent 55%),
+    radial-gradient(30rem 20rem at 55% 110%, var(--color-teal-500), transparent 58%);
+  opacity: 0.55;
+}
+
+/* The same idea over a dark ground, where saturated light reads far stronger. */
+.bg-aurora-night {
+  background:
+    radial-gradient(40rem 26rem at 8% -8%, oklch(0.58 0.19 255 / 0.55), transparent 60%),
+    radial-gradient(34rem 24rem at 95% 0%, oklch(0.58 0.2 300 / 0.5), transparent 58%),
+    radial-gradient(34rem 22rem at 60% 115%, oklch(0.65 0.13 180 / 0.4), transparent 60%);
+}
+
+/* Colour that moves. One slow hue rotation across a large field is the cheapest
+   way to make a page feel alive rather than printed. */
+@keyframes hue-drift {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(24deg);
+  }
+}
+.animate-hue {
+  animation: hue-drift 18s ease-in-out infinite alternate;
+}
+
+/* Gradient fill for primary actions - the old primary was near-black, which is
+   correct and completely joyless. */
+.btn-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-brand-500),
+    var(--color-violet-500) 55%,
+    var(--color-brand-600)
+  );
+  background-size: 160% 160%;
+  transition: background-position 0.4s var(--ease-out-soft), box-shadow 0.25s;
+  background-position: 0% 50%;
+}
+.btn-gradient:hover {
+  background-position: 100% 50%;
 }
 
 /*

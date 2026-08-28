@@ -11,11 +11,11 @@ import type { Course } from '@/lib/api';
 export function CourseCard({ course }: { course: Course }) {
   return (
     <Link href={`/courses/${course.documentId}`} className="group block h-full">
-      <article className="ring-gradient flex h-full flex-col overflow-hidden rounded-card border border-ink-200 bg-white shadow-soft transition-all duration-200 hover:-translate-y-1 hover:shadow-lift">
+      <article className="ring-gradient flex h-full flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-soft transition-all duration-200 hover:-translate-y-1.5 hover:shadow-lift">
         <CourseCover url={course.coverImageUrl} title={course.title} />
 
-        <div className="flex flex-1 flex-col p-5">
-          <h3 className="font-medium leading-snug transition-colors group-hover:text-brand-700">
+        <div className="flex flex-1 flex-col p-6">
+          <h3 className="text-lead font-semibold leading-snug transition-colors group-hover:text-brand-700">
             {course.title}
           </h3>
 
@@ -73,14 +73,14 @@ function hueFor(seed: string) {
 function CourseCover({ url, title }: { url?: string | null; title: string }) {
   if (url) {
     return (
-      <div className="relative aspect-[16/9] overflow-hidden">
+      <div className="relative aspect-[16/10] overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary
             external host; next/image would need each domain allow-listed. */}
         <img
           src={url}
           alt=""
           loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
         />
       </div>
     );
@@ -91,13 +91,26 @@ function CourseCover({ url, title }: { url?: string | null; title: string }) {
   return (
     <div
       aria-hidden
-      className="relative grid aspect-[16/9] place-items-center overflow-hidden"
+      className="relative grid aspect-[16/10] place-items-center overflow-hidden"
       style={{
-        background: `linear-gradient(135deg, oklch(0.9 0.08 ${hue}), oklch(0.78 0.13 ${(hue + 45) % 360}))`,
+        background: `linear-gradient(135deg, oklch(0.66 0.17 ${hue}), oklch(0.5 0.19 ${(hue + 55) % 360}))`,
       }}
     >
-      <span className="bg-dots absolute inset-0 opacity-40" />
-      <span className="relative text-[2.5rem] font-semibold leading-none text-white/80 transition-transform duration-500 group-hover:scale-110">
+      {/* A blurred highlight, so the panel has a light source rather than being
+          a flat ramp. */}
+      <span
+        className="absolute -left-10 -top-14 h-44 w-44 rounded-full opacity-50 blur-2xl"
+        style={{ background: `oklch(0.85 0.14 ${(hue + 120) % 360})` }}
+      />
+      <span
+        className="absolute inset-0 opacity-[0.18]"
+        style={{
+          backgroundImage:
+            'linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)',
+          backgroundSize: '26px 26px',
+        }}
+      />
+      <span className="relative text-mega font-semibold leading-none text-white/90 drop-shadow-sm transition-transform duration-500 group-hover:scale-110">
         {title.slice(0, 1).toUpperCase()}
       </span>
     </div>

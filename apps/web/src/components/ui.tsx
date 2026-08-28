@@ -24,7 +24,7 @@ export function PageShell({
     width === 'narrow' ? 'max-w-2xl' : width === 'wide' ? 'max-w-5xl' : 'max-w-3xl';
 
   return (
-    <main className={`mx-auto ${max} px-4 pb-20 pt-8 sm:px-6 sm:pt-10`}>{children}</main>
+    <main className={`mx-auto ${max} px-4 pb-24 pt-10 sm:px-6 sm:pt-14`}>{children}</main>
   );
 }
 
@@ -81,7 +81,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-card border border-ink-200 bg-white shadow-soft ${
+      className={`rounded-2xl border border-ink-200 bg-white shadow-soft ${
         interactive
           ? 'ring-gradient transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift'
           : ''
@@ -156,10 +156,10 @@ export function Button({
   className?: string;
 }) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-small font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex items-center justify-center gap-2 rounded-xl px-4.5 py-2.5 text-small font-semibold transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50';
   const styles = {
     primary:
-      'bg-ink-900 text-white shadow-soft hover:bg-ink-800 hover:shadow-lift active:scale-[0.98]',
+      'btn-gradient text-white shadow-glow hover:shadow-lift active:scale-[0.98]',
     secondary:
       'border border-ink-300 bg-white text-ink-800 shadow-soft hover:border-ink-400 hover:bg-ink-50 hover:shadow-lift active:scale-[0.98]',
     ghost: 'text-ink-600 hover:bg-ink-100 hover:text-ink-900',
