@@ -18,11 +18,12 @@ import type { ReactNode } from 'react';
  */
 export function Hero({
   signedIn,
-  stats,
+  highlights,
   children,
 }: {
   signedIn: boolean;
-  stats?: Array<{ value: string; label: string }>;
+  /** Short capability statements. Never counts of rows in a table. */
+  highlights?: Array<{ title: string; body: string }>;
   children?: ReactNode;
 }) {
   return (
@@ -117,31 +118,24 @@ export function Hero({
             </Link>
           </div>
 
-          {stats && stats.length > 0 && (
-            <dl
-              className="animate-rise mt-14 grid max-w-xl grid-cols-3 gap-4"
+          {highlights && highlights.length > 0 && (
+            <ul
+              className="animate-rise mt-14 grid gap-4 sm:grid-cols-3"
               style={{ animationDelay: '0.3s' }}
             >
-              {stats.map((stat, i) => (
-                <div
-                  key={stat.label}
-                  className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-5 backdrop-blur"
+              {highlights.map((item, i) => (
+                <li
+                  key={item.title}
+                  className="rounded-xl border border-white/10 bg-white/[0.06] px-5 py-5 backdrop-blur"
+                  style={{ animation: `pop 0.4s var(--ease-out-soft) ${0.36 + i * 0.08}s both` }}
                 >
-                  <dt className="sr-only">{stat.label}</dt>
-                  <dd>
-                    <span
-                      className="animate-pop block text-display font-semibold tabular-nums"
-                      style={{ animationDelay: `${0.36 + i * 0.08}s` }}
-                    >
-                      {stat.value}
-                    </span>
-                    <span className="mt-1 block text-micro uppercase tracking-wide text-white/50">
-                      {stat.label}
-                    </span>
-                  </dd>
-                </div>
+                  <p className="text-small font-semibold">{item.title}</p>
+                  <p className="mt-1.5 text-small leading-relaxed text-white/60">
+                    {item.body}
+                  </p>
+                </li>
               ))}
-            </dl>
+            </ul>
           )}
         </div>
 

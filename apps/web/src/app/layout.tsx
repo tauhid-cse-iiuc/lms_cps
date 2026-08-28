@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { getCurrentUser } from '@/lib/auth';
 import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
 
 /**
  * next/font downloads and self-hosts the font at build time, so there is no
@@ -27,13 +28,16 @@ export const metadata: Metadata = {
  * getCurrentUser is wrapped in React's cache, so a page that also needs the user
  * does not cause a second call. Resolving it on the server means the header
  * never renders a signed-out state and then corrects itself.
+ *
+ * The flex column with `mt-auto` on the footer keeps it at the bottom of short
+ * pages without pinning it over the content of long ones.
  */
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
   const user = await getCurrentUser();
 
   return (
     <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-white font-sans text-ink-900 antialiased">
+      <body className="flex min-h-screen flex-col bg-white font-sans text-ink-900 antialiased">
         <a href="#main" className="skip-link">
           Skip to content
         </a>
@@ -42,9 +46,11 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
           user={user ? { username: user.username, role: user.role } : null}
         />
 
-        <div id="main" tabIndex={-1}>
+        <div id="main" tabIndex={-1} className="flex-1">
           {children}
         </div>
+
+        <SiteFooter />
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { RoleType } from '@/lib/auth';
+import { SearchBox } from '@/components/search-box';
 
 type NavLink = { href: string; label: string };
 
@@ -111,7 +112,11 @@ export function SiteHeader({
           </ul>
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto hidden w-56 lg:block">
+          <SearchBox initial="" compact />
+        </div>
+
+        <div className="ml-auto flex items-center gap-3 lg:ml-3">
           {user ? (
             <>
               <span className="hidden text-micro text-ink-500 sm:inline">
@@ -177,7 +182,11 @@ export function SiteHeader({
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden border-t border-ink-200 md:hidden"
           >
-            <ul className="space-y-1 px-4 py-3">
+            <div className="px-4 pt-3">
+              <SearchBox initial="" compact onNavigate={() => setOpen(false)} />
+            </div>
+
+            <ul className="space-y-1 px-4 pb-3 pt-2">
               {links.map((link, i) => (
                 <motion.li
                   key={link.href}
