@@ -1,16 +1,22 @@
-'use client';
-
 import Link from 'next/link';
-import { motion, useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
 
 /**
  * The landing hero.
  *
- * `useReducedMotion` reads the same OS setting the stylesheet honours. The CSS
- * rule shortens transitions globally, but JavaScript-driven animation is not a
- * CSS transition, so it has to be asked separately - otherwise this would keep
- * moving for exactly the people who asked it not to.
+ * The entrance is a CSS animation, not a JavaScript one, and that is a
+ * correctness decision rather than a preference.
+ *
+ * A JavaScript reveal starts an element at opacity 0 and depends on a library
+ * running to bring it back. If that never happens - the bundle is slow, a script
+ * is blocked, the tab is in the background and requestAnimationFrame is paused -
+ * the headline of the site is simply invisible, with no error anywhere.
+ *
+ * A CSS keyframe has no such dependency. It runs from the stylesheet, so the
+ * worst case is that it plays instantly rather than not at all. Nothing here can
+ * leave text permanently unreadable.
+ *
+ * Being plain CSS also means this is a server component and ships no JavaScript.
  */
 export function Hero({
   signedIn,
@@ -19,16 +25,6 @@ export function Hero({
   signedIn: boolean;
   children?: ReactNode;
 }) {
-  const reduce = useReducedMotion();
-
-  // Each element starts slightly low and fades up, staggered. With reduced
-  // motion the offset becomes zero, so it appears rather than travels.
-  const rise = (delay: number) => ({
-    initial: { opacity: 0, y: reduce ? 0 : 16 },
-    animate: { opacity: 1, y: 0 },
-    transition: { delay, duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
-  });
-
   return (
     <section className="relative overflow-hidden">
       {/* Decorative wash. aria-hidden because it carries no information. */}
@@ -42,26 +38,32 @@ export function Hero({
       />
 
       <div className="mx-auto max-w-5xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
-        <motion.p
-          {...rise(0)}
-          className="text-small font-medium tracking-wide text-brand-600 uppercase"
+        <p
+          className="animate-rise text-small font-medium uppercase tracking-wide text-brand-600"
+          style={{ animationDelay: '0s' }}
         >
           Learning Management System
-        </motion.p>
+        </p>
 
-        <motion.h1
-          {...rise(0.08)}
-          className="mt-3 max-w-2xl text-hero font-semibold leading-[1.1] tracking-tight sm:text-[3.25rem]"
+        <h1
+          className="animate-rise mt-3 max-w-2xl text-hero font-semibold leading-[1.1] tracking-tight sm:text-[3.25rem]"
+          style={{ animationDelay: '0.08s' }}
         >
           Courses that know who you are.
-        </motion.h1>
+        </h1>
 
-        <motion.p {...rise(0.16)} className="mt-5 max-w-xl text-lead text-ink-600">
+        <p
+          className="animate-rise mt-5 max-w-xl text-lead text-ink-600"
+          style={{ animationDelay: '0.16s' }}
+        >
           Role-based access enforced on the server, sequential lessons, progress
           tracked per student, and quizzes that mark themselves.
-        </motion.p>
+        </p>
 
-        <motion.div {...rise(0.24)} className="mt-8 flex flex-wrap gap-3">
+        <div
+          className="animate-rise mt-8 flex flex-wrap gap-3"
+          style={{ animationDelay: '0.24s' }}
+        >
           {signedIn ? (
             <Link
               href="/dashboard"
@@ -91,12 +93,12 @@ export function Hero({
           >
             Browse courses
           </Link>
-        </motion.div>
+        </div>
 
         {children && (
-          <motion.div {...rise(0.32)} className="mt-14">
+          <div className="animate-rise mt-14" style={{ animationDelay: '0.32s' }}>
             {children}
-          </motion.div>
+          </div>
         )}
       </div>
     </section>

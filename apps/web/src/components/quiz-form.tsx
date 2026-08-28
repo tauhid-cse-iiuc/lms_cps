@@ -65,7 +65,10 @@ export function QuizForm({
         </span>
       </div>
 
-      <AnimatePresence mode="wait">
+      {/* initial={false}: the first question paints immediately rather than
+          starting at opacity 0 and waiting for JavaScript to reveal it. Later
+          steps still animate. */}
+      <AnimatePresence mode="wait" initial={false}>
         <motion.fieldset
           key={step}
           initial={{ opacity: 0, x: 20 }}

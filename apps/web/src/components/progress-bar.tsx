@@ -1,23 +1,26 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion, useInView, useReducedMotion } from 'motion/react';
 
 /**
  * Progress bar with a counting figure.
  *
- * Two deliberate choices here.
+ * ---------------------------------------------------------------------------
+ * THE CORRECT VALUE IS RENDERED FIRST; THE ANIMATION IS AN ENHANCEMENT
+ * ---------------------------------------------------------------------------
+ * Both the number and the bar width start at their FINAL values, server-side.
+ * The count-up only begins once the component has mounted and scrolled into
+ * view, and it restores the true figure the moment it finishes.
  *
- * The bar animates only when it scrolls into view (`useInView`), so a list of
- * ten courses does not run ten animations off-screen before the reader arrives.
+ * The alternative - starting at zero and relying on JavaScript to arrive at the
+ * real number - means that whenever the animation does not run, the page states
+ * a percentage that is simply false. A blocked bundle, a background tab with
+ * requestAnimationFrame paused, or a slow device would all produce a confident
+ * "0%" on a course the student has half finished. A progress figure is data, not
+ * decoration, and it should never be wrong in service of a transition.
  *
- * The number counts up rather than appearing, because the percentage IS the
- * point of this component - it is the visible output of the progress
- * calculation, and drawing the eye to it is the whole job.
- *
- * The accessible value is set to the FINAL number immediately. A screen reader
- * must not have to wait out an animation, and must never be told 37% when the
- * real answer is 40%.
+ * The bar itself animates through a CSS transition rather than JavaScript, so it
+ * moves whenever the value changes without needing a library at all.
  */
 export function ProgressBar({
   percentage,
@@ -30,32 +33,49 @@ export function ProgressBar({
 }) {
   const safe = Math.max(0, Math.min(100, Math.round(percentage)));
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: '-40px' });
-  const reduce = useReducedMotion();
-  const [shown, setShown] = useState(reduce ? safe : 0);
+  const [shown, setShown] = useState(safe);
 
   useEffect(() => {
-    if (reduce) {
-      setShown(safe);
-      return;
-    }
-    if (!inView) return;
+    const node = ref.current;
+    if (!node) return;
+
+    // Honour the OS setting. The global CSS rule shortens transitions, but a
+    // JavaScript count is not a transition, so it has to be asked separately.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (typeof IntersectionObserver === 'undefined') return;
 
     let raf = 0;
-    const start = performance.now();
-    const duration = 700;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
 
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      // Ease-out cubic: quick at first, settling at the end.
-      const eased = 1 - Math.pow(1 - t, 3);
-      setShown(Math.round(safe * eased));
-      if (t < 1) raf = requestAnimationFrame(step);
+        const start = performance.now();
+        const duration = 700;
+
+        const step = (now: number) => {
+          const t = Math.min(1, (now - start) / duration);
+          // Ease-out cubic: quick at first, settling at the end.
+          const eased = 1 - Math.pow(1 - t, 3);
+          setShown(Math.round(safe * eased));
+          if (t < 1) raf = requestAnimationFrame(step);
+          // No else-branch resetting to `safe`: the final step already lands
+          // there, because eased reaches exactly 1.
+        };
+
+        setShown(0);
+        raf = requestAnimationFrame(step);
+      },
+      { rootMargin: '-40px' }
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(raf);
     };
-
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [inView, safe, reduce]);
+  }, [safe]);
 
   const complete = safe === 100;
 
@@ -82,13 +102,11 @@ export function ProgressBar({
           size === 'compact' ? 'h-1.5' : 'h-2'
         }`}
       >
-        <motion.div
-          initial={{ width: reduce ? `${safe}%` : 0 }}
-          animate={{ width: inView || reduce ? `${safe}%` : 0 }}
-          transition={{ duration: reduce ? 0 : 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className={`h-full rounded-full ${
+        <div
+          className={`h-full rounded-full transition-[width] duration-700 ease-out ${
             complete ? 'bg-success' : 'bg-brand-500'
           }`}
+          style={{ width: `${shown}%` }}
         />
       </div>
     </div>
