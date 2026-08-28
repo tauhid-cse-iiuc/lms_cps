@@ -77,8 +77,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
           type="email"
           required
           autoComplete="email"
+          placeholder={isRegister ? 'you@gmail.com' : undefined}
           className={field}
         />
+        {isRegister && (
+          <span className="mt-1 block text-micro font-normal text-ink-500">
+            Google addresses only.
+          </span>
+        )}
       </label>
 
       <label className="block text-small font-medium text-ink-700">

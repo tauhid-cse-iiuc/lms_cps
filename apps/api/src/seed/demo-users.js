@@ -1,6 +1,7 @@
 'use strict';
 
 const { ROLES } = require('./permission-matrix');
+const signupPolicy = require('../utils/signup-policy');
 
 /**
  * Creates one demo account per role.
@@ -70,31 +71,33 @@ module.exports = async (strapi) => {
       throw new Error(`[seed] role "${demo.roleType}" is missing; cannot create ${demo.email}`);
     }
 
-    // strapi.documents(), NOT strapi.db.query().
-    //
-    // The Document Service runs a transform over every field whose type is
-    // `password` and bcrypt-hashes it (@strapi/core document-service/attributes/
-    // transforms.js). The lower-level query engine does no such thing: it writes
-    // exactly what it is given. Creating a user with strapi.db.query() therefore
-    // stores the password as readable plaintext AND breaks login, because the
-    // login route compares the submitted password against what it assumes is a
-    // hash. Neither symptom points at the line that caused it.
-    await strapi.documents('plugin::users-permissions.user').create({
-      data: {
-        username: demo.username,
-        email: demo.email,
-        password,
-        role: role.id,
-        provider: 'local',
-        // `confirmed` defaults to false, and Strapi rejects the login of an
-        // unconfirmed user whenever the email_confirmation setting is on
-        // (auth.js:173). That setting is off here, so false would work today -
-        // but "works until someone changes an unrelated setting" is not the same
-        // as working, so it is set explicitly.
-        confirmed: true,
-        blocked: false,
-      },
-    });
+    await signupPolicy.withoutPolicy(() =>
+      // strapi.documents(), NOT strapi.db.query().
+      //
+      // The Document Service runs a transform over every field whose type is
+      // `password` and bcrypt-hashes it (@strapi/core document-service/attributes/
+      // transforms.js). The lower-level query engine does no such thing: it writes
+      // exactly what it is given. Creating a user with strapi.db.query() therefore
+      // stores the password as readable plaintext AND breaks login, because the
+      // login route compares the submitted password against what it assumes is a
+      // hash. Neither symptom points at the line that caused it.
+      strapi.documents('plugin::users-permissions.user').create({
+        data: {
+          username: demo.username,
+          email: demo.email,
+          password,
+          role: role.id,
+          provider: 'local',
+          // `confirmed` defaults to false, and Strapi rejects the login of an
+          // unconfirmed user whenever the email_confirmation setting is on
+          // (auth.js:173). That setting is off here, so false would work today -
+          // but "works until someone changes an unrelated setting" is not the
+          // same as working, so it is set explicitly.
+          confirmed: true,
+          blocked: false,
+        },
+      })
+    );
 
     created += 1;
     strapi.log.info(`[seed] created demo user ${demo.email} (${demo.roleType})`);

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AuthForm } from '@/components/auth-form';
+import { GoogleButton } from '@/components/google-button';
 
 export const metadata = { title: 'Create account' };
 
@@ -11,11 +12,13 @@ export default function RegisterPage() {
           Create your account
         </h1>
         <p className="mt-1.5 mb-7 text-small text-ink-500">
-          New accounts start as students. Roles are assigned by an administrator,
-          never chosen at sign-up.
+          Sign up with a Google address. New accounts start as students — roles are
+          assigned by an administrator, never chosen at sign-up.
         </p>
 
         <AuthForm mode="register" />
+
+        <GoogleButton label="Sign up with Google" />
 
         <p className="mt-6 text-small text-ink-500">
           Already registered?{' '}

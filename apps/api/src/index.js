@@ -3,12 +3,47 @@
 const seedRolesAndPermissions = require('./seed/roles');
 const seedDemoUsers = require('./seed/demo-users');
 const seedDemoContent = require('./seed/demo-content');
+const seedProviders = require('./seed/providers');
+const signupPolicy = require('./utils/signup-policy');
 
 module.exports = {
   /**
    * Runs before the application is initialised. Nothing to extend yet.
    */
-  register(/* { strapi } */) {},
+  register({ strapi }) {
+    /**
+     * The sign-up domain policy, applied where users are CREATED rather than in
+     * any one controller.
+     *
+     * Registered here, in register(), because lifecycles must be subscribed
+     * before anything can create a row - by bootstrap() it would already be
+     * possible to miss one.
+     *
+     * Every route to a new account passes through this: the password sign-up
+     * form, the Google provider callback, and anything added later. A check
+     * inside the register controller would have left Google wide open, because
+     * that path creates its user deep inside the plugin's provider service and
+     * never touches the register controller at all.
+     */
+    strapi.db.lifecycles.subscribe({
+      models: ['plugin::users-permissions.user'],
+
+      beforeCreate(event) {
+        if (signupPolicy.isBypassing()) return;
+
+        const email = event.params?.data?.email;
+        if (signupPolicy.isAllowed(email)) return;
+
+        // ApplicationError surfaces as a 400 with this message rather than a
+        // 500 with a stack trace, so the person signing up is told what is
+        // wrong instead of being shown an internal failure.
+        const { errors } = require('@strapi/utils');
+        throw new errors.ApplicationError(
+          `Sign-up is limited to ${signupPolicy.describeAllowed()} addresses.`
+        );
+      },
+    });
+  },
 
   /**
    * Runs on every startup, after Strapi has synced the database schema and after
@@ -45,6 +80,7 @@ module.exports = {
       // infrastructure, so once someone has edited or deleted it the seeder
       // stays out of the way rather than putting it back on every restart.
       await seedDemoContent(strapi);
+      await seedProviders(strapi);
     } catch (error) {
       strapi.log.error(
         '[seed] failed - the application would have started without working roles, so refusing to start'

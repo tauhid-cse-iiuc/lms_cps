@@ -14,3 +14,14 @@
 /** Base URL for server-side calls (Server Components, Route Handlers). */
 export const STRAPI_URL =
   process.env.STRAPI_URL ?? 'http://localhost:1337';
+
+/**
+ * Whether to offer Google sign-in.
+ *
+ * Must match the API having GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET set. It is
+ * a separate variable because the two apps are deployed separately and neither
+ * can read the other's environment - and because a button that appears without
+ * working credentials fails at Google with an error the visitor cannot act on.
+ */
+export const GOOGLE_SIGNIN_ENABLED =
+  process.env.GOOGLE_SIGNIN_ENABLED === 'true';
