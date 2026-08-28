@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { apiGet, type Course } from '@/lib/api';
-import { PageShell, PageHeader, Card, EmptyState, ErrorNote, Button } from '@/components/ui';
+import { PageShell, PageHeader, EmptyState, ErrorNote, Button } from '@/components/ui';
+import { CourseCard } from '@/components/course-card';
 import { CourseSearch } from '@/components/course-search';
 
 export const metadata = { title: 'Courses' };
@@ -75,69 +75,11 @@ export default async function CoursesPage({
               className="animate-rise"
               style={{ animationDelay: `${Math.min(i, 8) * 0.05}s` }}
             >
-              <Link href={`/courses/${course.documentId}`} className="block h-full">
-                <Card interactive className="flex h-full flex-col overflow-hidden">
-                  <CourseCover url={course.coverImageUrl} title={course.title} />
-
-                  <div className="flex flex-1 flex-col p-5">
-                    <h2 className="font-medium leading-snug">{course.title}</h2>
-                    {course.description && (
-                      <p className="mt-2 line-clamp-3 flex-1 text-small text-ink-500">
-                        {course.description}
-                      </p>
-                    )}
-                    {course.owner?.username && (
-                      <p className="mt-4 text-micro text-ink-400">
-                        {course.owner.username}
-                      </p>
-                    )}
-                  </div>
-                </Card>
-              </Link>
+              <CourseCard course={course} />
             </li>
           ))}
         </ul>
       )}
     </PageShell>
-  );
-}
-
-/**
- * Cover image, or a generated stand-in.
- *
- * `coverImageUrl` is a plain URL rather than an upload, because Railway's
- * filesystem is wiped on every redeploy and an uploaded file would vanish. Most
- * courses will not have one, so the fallback has to look deliberate rather than
- * broken: a tinted panel derived from the title, which is stable per course.
- */
-function CourseCover({ url, title }: { url?: string | null; title: string }) {
-  if (url) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- arbitrary external
-      // host; next/image would need every domain allow-listed in advance.
-      <img
-        src={url}
-        alt=""
-        loading="lazy"
-        className="aspect-[16/9] w-full object-cover"
-      />
-    );
-  }
-
-  // Deterministic hue from the title, so a course keeps the same colour.
-  const hue = [...title].reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) % 360, 7);
-
-  return (
-    <div
-      aria-hidden
-      className="grid aspect-[16/9] w-full place-items-center"
-      style={{
-        background: `linear-gradient(135deg, oklch(0.93 0.05 ${hue}), oklch(0.86 0.08 ${(hue + 40) % 360}))`,
-      }}
-    >
-      <span className="text-display font-semibold text-white/70">
-        {title.slice(0, 1).toUpperCase()}
-      </span>
-    </div>
   );
 }

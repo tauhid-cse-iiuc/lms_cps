@@ -6,6 +6,14 @@ import { PageShell, PageHeader, Card, EmptyState, Button, Badge } from '@/compon
 
 export const metadata = { title: 'Admin' };
 
+/** Same hues the dashboard band uses, so a role looks the same everywhere. */
+const ROLE_BAR: Record<string, string> = {
+  admin: 'bg-violet-500',
+  'content-manager': 'bg-amber-500',
+  instructor: 'bg-brand-500',
+  student: 'bg-teal-500',
+};
+
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Admin',
   'content-manager': 'Content Manager',
@@ -49,12 +57,12 @@ export default async function AdminPage() {
 
   const totals = stats
     ? ([
-        ['Users', stats.totals.users],
-        ['Courses', stats.totals.courses],
-        ['Lessons', stats.totals.lessons],
-        ['Enrolments', stats.totals.enrollments],
-        ['Quiz attempts', stats.totals.quizAttempts],
-        ['Blog posts', stats.totals.blogPosts],
+        ['Users', stats.totals.users, 'text-violet-600', 'from-violet-50'],
+        ['Courses', stats.totals.courses, 'text-brand-600', 'from-brand-50'],
+        ['Lessons', stats.totals.lessons, 'text-brand-600', 'from-brand-50'],
+        ['Enrolments', stats.totals.enrollments, 'text-teal-600', 'from-teal-50'],
+        ['Quiz attempts', stats.totals.quizAttempts, 'text-amber-600', 'from-amber-50'],
+        ['Blog posts', stats.totals.blogPosts, 'text-amber-600', 'from-amber-50'],
       ] as const)
     : [];
 
@@ -74,14 +82,14 @@ export default async function AdminPage() {
           <section className="mt-8">
             <h2 className="sr-only">Totals</h2>
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {totals.map(([label, value], i) => (
+              {totals.map(([label, value, figure, wash], i) => (
                 <div
                   key={label}
-                  className="animate-rise rounded-card border border-ink-200 p-4"
+                  className={`animate-rise rounded-card border border-ink-200 bg-gradient-to-b ${wash} to-white p-4 shadow-soft`}
                   style={{ animationDelay: `${i * 0.04}s` }}
                 >
                   <dt className="text-micro text-ink-500">{label}</dt>
-                  <dd className="mt-1 text-title font-semibold tabular-nums">
+                  <dd className={`mt-1 text-title font-semibold tabular-nums ${figure}`}>
                     {value}
                   </dd>
                 </div>
@@ -101,7 +109,7 @@ export default async function AdminPage() {
                       thing being communicated, and the figure is still there. */}
                   <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-ink-100">
                     <span
-                      className="block h-full rounded-full bg-brand-400"
+                      className={`block h-full rounded-full ${ROLE_BAR[row.role] ?? 'bg-brand-400'}`}
                       style={{
                         width: `${(row.count / peak) * 100}%`,
                         animation: `rise 0.5s var(--ease-out-soft) ${0.1 + i * 0.07}s both`,

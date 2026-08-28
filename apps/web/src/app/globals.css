@@ -17,7 +17,8 @@
   --color-ink-100: oklch(0.968 0.004 250);
   --color-ink-200: oklch(0.925 0.006 250);
   --color-ink-300: oklch(0.86 0.008 250);
-  --color-ink-400: oklch(0.68 0.012 250);
+  --color-ink-350: oklch(0.68 0.012 250); /* borders and icons only, never text */
+  --color-ink-400: oklch(0.56 0.012 250); /* 4.66:1 on white - it carries real text */
   --color-ink-500: oklch(0.55 0.015 250);
   --color-ink-600: oklch(0.44 0.018 250);
   --color-ink-700: oklch(0.35 0.02 250);
@@ -35,8 +36,42 @@
   --color-brand-600: oklch(0.5 0.19 255);
   --color-brand-700: oklch(0.42 0.16 255);
 
+  /* Secondary hues. Each is assigned to a MEANING, not sprinkled for variety -
+     violet for authoring, amber for quizzes, teal for progress and completion.
+     Colour that means something is readable; colour that just decorates is
+     noise, and the two look identical until you try to use the interface. */
+  --color-violet-50: oklch(0.97 0.02 300);
+  --color-violet-100: oklch(0.94 0.05 300);
+  --color-violet-500: oklch(0.58 0.2 300);
+  --color-violet-600: oklch(0.5 0.2 300);
+
+  --color-amber-50: oklch(0.97 0.03 75);
+  --color-amber-100: oklch(0.94 0.07 75);
+  --color-amber-500: oklch(0.72 0.15 65);
+  --color-amber-600: oklch(0.55 0.15 55); /* 5.11:1 on white, 4.66:1 on amber-50 */
+
+  --color-teal-50: oklch(0.97 0.03 180);
+  --color-teal-100: oklch(0.93 0.06 180);
+  --color-teal-500: oklch(0.65 0.13 180);
+  --color-teal-600: oklch(0.52 0.12 180); /* 5.0:1 on white, 4.63:1 on teal-50 */
+
   --color-success: oklch(0.62 0.15 150);
   --color-danger: oklch(0.55 0.19 25);
+
+  /* Layered surfaces. A single white page has no depth; these give sections
+     something to sit ON, which is most of what "richness" actually is. */
+  --color-surface: oklch(1 0 0);
+  --color-surface-sunken: oklch(0.985 0.004 260);
+  --color-surface-raised: oklch(1 0 0);
+
+  /* Shadows tinted with the ink hue rather than pure black. Black shadows on a
+     warm-grey page read as dirt; tinted ones read as depth. */
+  --shadow-soft: 0 1px 2px oklch(0.18 0.02 250 / 0.04),
+    0 4px 12px oklch(0.18 0.02 250 / 0.05);
+  --shadow-lift: 0 2px 4px oklch(0.18 0.02 250 / 0.05),
+    0 12px 28px oklch(0.18 0.02 250 / 0.1);
+  --shadow-glow: 0 0 0 1px oklch(0.58 0.19 255 / 0.15),
+    0 8px 30px oklch(0.58 0.19 255 / 0.15);
 
   /* Type scale, roughly a 1.25 ratio. Named by role rather than size so a
      heading does not get chosen by how big it looks. */
@@ -131,4 +166,111 @@ h3 {
 
 .animate-rise {
   animation: rise 0.45s var(--ease-out-soft) both;
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Texture and depth                                                    */
+/* ------------------------------------------------------------------ */
+
+/*
+ * A very faint dot grid. Large flat areas of white are what make an interface
+ * feel unfinished; a texture the eye cannot quite resolve gives it a surface
+ * without competing with the content. Kept under 4% opacity on purpose - if you
+ * can consciously see it, it is too strong.
+ */
+.bg-dots {
+  background-image: radial-gradient(
+    var(--color-ink-300) 0.8px,
+    transparent 0.8px
+  );
+  background-size: 18px 18px;
+  opacity: 0.35;
+}
+
+/*
+ * Soft colour fields, positioned behind content. Two overlapping radial washes
+ * read as light falling on the page rather than as a gradient applied to it.
+ */
+.bg-aurora {
+  background:
+    radial-gradient(42rem 26rem at 12% -8%, var(--color-brand-100), transparent 62%),
+    radial-gradient(34rem 22rem at 88% 4%, var(--color-violet-100), transparent 58%),
+    radial-gradient(30rem 20rem at 60% 100%, var(--color-teal-100), transparent 60%);
+}
+
+/*
+ * A gradient hairline that appears on hover. Applied to a pseudo-element so the
+ * card keeps its own background and the border can be a gradient, which a plain
+ * border-color cannot be.
+ */
+.ring-gradient {
+  position: relative;
+}
+.ring-gradient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-400),
+    var(--color-violet-500),
+    var(--color-teal-500)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.25s var(--ease-out-soft);
+  pointer-events: none;
+}
+.ring-gradient:hover::after,
+.ring-gradient:focus-within::after {
+  opacity: 1;
+}
+
+/* Slow drift for the decorative washes, so the page is never entirely static. */
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, -1.5%, 0) scale(1.06);
+  }
+}
+.animate-drift {
+  animation: drift 22s ease-in-out infinite;
+}
+
+/* Sweep of light across a surface, used once on the hero panel. */
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-12deg);
+  }
+}
+.animate-sheen {
+  animation: sheen 6s var(--ease-out-soft) 1.2s infinite;
+}
+
+/* Scale-in for stat figures and badges. */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-pop {
+  animation: pop 0.4s var(--ease-out-soft) both;
 }

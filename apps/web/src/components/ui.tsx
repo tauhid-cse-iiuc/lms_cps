@@ -81,9 +81,9 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-card border border-ink-200 bg-white ${
+      className={`rounded-card border border-ink-200 bg-white shadow-soft ${
         interactive
-          ? 'transition-all duration-200 hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-lg hover:shadow-ink-900/5'
+          ? 'ring-gradient transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift'
           : ''
       } ${className}`}
     >
@@ -103,12 +103,24 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="animate-rise rounded-card border border-dashed border-ink-300 px-6 py-14 text-center">
-      <p className="text-lead font-medium text-ink-700">{title}</p>
+    <div className="animate-rise relative overflow-hidden rounded-card border border-dashed border-ink-300 bg-surface-sunken px-6 py-14 text-center">
+      <span aria-hidden className="bg-dots absolute inset-0 opacity-60" />
+      <span
+        aria-hidden
+        className="relative mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full border border-ink-200 bg-white text-ink-300 shadow-soft"
+      >
+        <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5">
+          <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.5" />
+          <path d="m13.5 13.5 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </span>
+      <p className="relative text-lead font-medium text-ink-700">{title}</p>
       {description && (
-        <p className="mx-auto mt-2 max-w-sm text-small text-ink-500">{description}</p>
+        <p className="relative mx-auto mt-2 max-w-sm text-small text-ink-500">
+          {description}
+        </p>
       )}
-      {action && <div className="mt-5">{action}</div>}
+      {action && <div className="relative mt-5">{action}</div>}
     </div>
   );
 }
@@ -146,9 +158,10 @@ export function Button({
   const base =
     'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-small font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50';
   const styles = {
-    primary: 'bg-ink-900 text-white hover:bg-ink-800 active:scale-[0.98]',
+    primary:
+      'bg-ink-900 text-white shadow-soft hover:bg-ink-800 hover:shadow-lift active:scale-[0.98]',
     secondary:
-      'border border-ink-300 bg-white text-ink-800 hover:border-ink-400 hover:bg-ink-50 active:scale-[0.98]',
+      'border border-ink-300 bg-white text-ink-800 shadow-soft hover:border-ink-400 hover:bg-ink-50 hover:shadow-lift active:scale-[0.98]',
     ghost: 'text-ink-600 hover:bg-ink-100 hover:text-ink-900',
   }[variant];
 
@@ -178,11 +191,13 @@ export function Badge({
   tone = 'neutral',
 }: {
   children: ReactNode;
-  tone?: 'neutral' | 'success' | 'muted';
+  tone?: 'neutral' | 'success' | 'warn' | 'violet' | 'muted';
 }) {
   const styles = {
     neutral: 'bg-brand-50 text-brand-700 border-brand-200',
-    success: 'bg-success/10 text-success border-success/25',
+    success: 'bg-teal-50 text-teal-600 border-teal-100',
+    warn: 'bg-amber-50 text-amber-600 border-amber-100',
+    violet: 'bg-violet-50 text-violet-600 border-violet-100',
     muted: 'bg-ink-100 text-ink-600 border-ink-200',
   }[tone];
 
