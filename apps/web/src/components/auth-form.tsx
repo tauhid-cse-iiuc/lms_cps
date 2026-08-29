@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
+import { PasswordRequirements } from '@/components/password-requirements';
+import { passwordIsValid } from '@/lib/password-policy';
 
 type Mode = 'login' | 'register';
 
@@ -30,11 +32,22 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  /**
+   * Set when sign-up succeeded but the account is not usable yet, because email
+   * confirmation is on. The form is REPLACED rather than annotated: leaving the
+   * fields on screen invites a second submission, which would fail as "already
+   * taken" and read as though the first one had not worked.
+   */
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState<string | null>(null);
+
   const isRegister = mode === 'register';
 
   /* ---- live availability, sign-up only -------------------------------- */
+  const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  // Controlled only on sign-up, which is the only mode with a meter to feed.
+  const [password, setPassword] = useState('');
   const [checking, setChecking] = useState(false);
   const [availability, setAvailability] = useState<Availability>({});
   const requestId = useRef(0);
@@ -92,6 +105,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     const form = new FormData(event.currentTarget);
     const payload = isRegister
       ? {
+          name: String(form.get('name') ?? ''),
           username: String(form.get('username') ?? ''),
           email: String(form.get('email') ?? ''),
           password: String(form.get('password') ?? ''),
@@ -115,6 +129,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return;
     }
 
+    if (data?.confirmationRequired) {
+      setAwaitingConfirmation(data.email ?? email);
+      setBusy(false);
+      return;
+    }
+
     router.push('/dashboard');
     // The cookie was set on the response to the fetch above, so the server has
     // not yet rendered anything with it. Without this the dashboard would render
@@ -122,10 +142,35 @@ export function AuthForm({ mode }: { mode: Mode }) {
     router.refresh();
   }
 
+  if (awaitingConfirmation) {
+    return <ConfirmationSent email={awaitingConfirmation} />;
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {isRegister ? (
         <>
+          {/* Name before username, because it is the easier question. Asking
+              someone to invent a handle first makes them stop and think at the
+              very top of a form they have not committed to yet. */}
+          <label className="block text-small font-medium text-ink-700">
+            Full name
+            <input
+              name="name"
+              type="text"
+              required
+              maxLength={80}
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Doe"
+              className={field}
+            />
+            <span className="mt-1 block text-micro font-normal text-ink-500">
+              How you will be shown on courses and posts.
+            </span>
+          </label>
+
           <label className="block text-small font-medium text-ink-700">
             Username
             <input
@@ -190,12 +235,16 @@ export function AuthForm({ mode }: { mode: Mode }) {
           required
           minLength={isRegister ? 8 : undefined}
           autoComplete={isRegister ? 'new-password' : 'current-password'}
+          value={isRegister ? password : undefined}
+          onChange={isRegister ? (e) => setPassword(e.target.value) : undefined}
+          aria-describedby={isRegister ? 'password-requirements' : undefined}
           className={field}
         />
+        {/* Sign-in deliberately has no meter. Rating a password somebody
+            already has tells them nothing they can act on, and it would put a
+            live judgement of an existing credential on screen. */}
         {isRegister && (
-          <span className="mt-1 block text-micro font-normal text-ink-500">
-            At least 8 characters.
-          </span>
+          <PasswordRequirements value={password} id="password-requirements" />
         )}
       </label>
 
@@ -212,12 +261,86 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
       <button
         type="submit"
-        disabled={busy || Boolean(blocked)}
+        disabled={busy || Boolean(blocked) || (isRegister && !passwordIsValid(password))}
         className="btn-gradient w-full rounded-lg px-4 py-2.5 text-small font-semibold text-white shadow-glow transition-transform active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
       </button>
     </form>
+  );
+}
+
+/**
+ * Shown in place of the sign-up form once the confirmation email is away.
+ *
+ * The resend button is the reason this is a component rather than a paragraph.
+ * Confirmation emails are the single most reliable way to lose a new user -
+ * they land in spam, or the person closes the tab and the link ages out - and
+ * without a resend the only route back is registering again with a different
+ * address.
+ */
+function ConfirmationSent({ email }: { email: string }) {
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+
+  async function resend() {
+    setState('sending');
+    const res = await fetch('/api/auth/resend-confirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    setState(res.ok ? 'sent' : 'failed');
+  }
+
+  return (
+    <div className="rounded-xl border border-ink-200 bg-white p-6 text-center shadow-soft">
+      <span
+        aria-hidden
+        className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-teal-50 text-teal-600"
+      >
+        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+          <path
+            d="M3 7.5 12 13l9-5.5M4 5.5h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1Z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+
+      <h2 className="mt-4 text-lead font-semibold">Check your inbox</h2>
+      <p className="mt-2 text-small leading-relaxed text-ink-500">
+        A confirmation link is on its way to{' '}
+        <span className="font-medium text-ink-900">{email}</span>. Your account
+        is created, but you cannot sign in until the address is confirmed.
+      </p>
+
+      <p className="mt-3 text-micro leading-relaxed text-ink-400">
+        Nothing after a minute or two? Check the spam folder before resending -
+        the first message from a new sender often lands there.
+      </p>
+
+      <button
+        type="button"
+        onClick={resend}
+        disabled={state === 'sending' || state === 'sent'}
+        className="mt-5 text-small font-medium text-brand-700 underline underline-offset-2 disabled:no-underline disabled:opacity-60"
+      >
+        {state === 'sending'
+          ? 'Sending…'
+          : state === 'sent'
+            ? 'Sent again — check your inbox'
+            : 'Send it again'}
+      </button>
+
+      {state === 'failed' && (
+        <p role="alert" className="mt-3 text-micro text-danger">
+          That did not go through. The address may already be confirmed — try
+          signing in.
+        </p>
+      )}
+    </div>
   );
 }
 

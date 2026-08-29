@@ -20,12 +20,119 @@ const deniedExecutableTypes = [
   'application/x-mach-binary',
 ];
 
-module.exports = () => ({
+/**
+ * SMTP, read from the environment rather than configured in the admin panel.
+ *
+ * Same reasoning as the roles and the Google provider: a mail setup that exists
+ * only because somebody filled in a form once is a setup production does not
+ * have. Here it is a config file, so a deployment either has the variables or
+ * visibly does not.
+ *
+ * Gmail specifically wants an APP PASSWORD, not the account password - a
+ * 16-character credential generated per application at
+ * myaccount.google.com/apppasswords, which requires 2-Step Verification to be
+ * on. The account password is rejected outright, and the error Google returns
+ * ("Username and Password not accepted") does not say which of the two you got
+ * wrong.
+ *
+ * Port 465 with secure:true is the implicit-TLS port: the connection is
+ * encrypted before a single byte of the credential is sent. Port 587 also works
+ * but starts in the clear and upgrades with STARTTLS, so 465 is the default
+ * here.
+ */
+/**
+ * Google DISPLAYS an app password as four groups of four - "abcd efgh ijkl mnop"
+ * - and people paste what they are shown. Gmail's SMTP server then rejects it,
+ * because the credential is the sixteen characters without the spaces, and the
+ * error it returns ("Username and Password not accepted") says nothing about
+ * whitespace.
+ *
+ * Narrowly matched on purpose: only a value in exactly that shape is stripped,
+ * so a genuine password that happens to contain a space is left alone.
+ */
+const APP_PASSWORD_WITH_SPACES = /^[a-z]{4}( [a-z]{4}){3}$/i;
+
+const normalisePassword = (value) =>
+  APP_PASSWORD_WITH_SPACES.test(value) ? value.replace(/ /g, '') : value;
+
+const { describeFailure } = require('../src/utils/password-policy');
+
+const mailer = (env) => {
+  const user = env('SMTP_USERNAME', '');
+  const pass = normalisePassword(env('SMTP_PASSWORD', ''));
+
+  // No credentials: leave the provider unconfigured rather than half-configured.
+  // Strapi then falls back to its sendmail provider, which fails loudly on a
+  // machine with no local MTA - and the seed reads the same two variables, so
+  // the features that depend on mail stay switched off instead of stranding
+  // people mid-sign-up. See src/seed/email.js.
+  if (!user || !pass) return {};
+
+  const from = env('EMAIL_FROM', user);
+
+  return {
+    email: {
+      config: {
+        provider: 'nodemailer',
+        providerOptions: {
+          host: env('SMTP_HOST', 'smtp.gmail.com'),
+          port: env.int('SMTP_PORT', 465),
+          secure: env.bool('SMTP_SECURE', true),
+          auth: { user, pass },
+        },
+        settings: {
+          // Gmail rewrites the envelope sender to the authenticated account
+          // whatever is put here, so a defaultFrom on another domain is
+          // silently replaced rather than honoured. Keeping them the same means
+          // the header agrees with what actually gets sent.
+          defaultFrom: from,
+          defaultReplyTo: env('EMAIL_REPLY_TO', from),
+        },
+      },
+    },
+  };
+};
+
+module.exports = ({ env }) => ({
+  ...mailer(env),
+
   'users-permissions': {
     config: {
       // Use the SessionManager (short-lived access token + rotating refresh
       // token) rather than the legacy 30-day plugin JWT.
       jwtManagement: 'refresh',
+
+      /**
+       * Fields the sign-up form may send beyond username, email and password.
+       *
+       * The register controller rejects the whole request - "Invalid
+       * parameters: name" - for any key not on this list, rather than ignoring
+       * the extra. So adding a column to the user model is not enough to be
+       * able to fill it at sign-up; it has to be named here as well.
+       */
+      register: {
+        allowedFields: ['name'],
+      },
+
+      /**
+       * The password rules, applied by the PLUGIN's own validation.
+       *
+       * This one hook covers register, change-password and reset-password -
+       * all three call the same validator - so the rules cannot be satisfied
+       * on one route and skipped on another.
+       *
+       * It THROWS rather than returning false on purpose. The plugin turns a
+       * false into the fixed string "Password validation failed.", which tells
+       * somebody nothing about what to change; the message on a thrown error is
+       * passed through, so they get the list of what is missing instead.
+       */
+      validationRules: {
+        validatePassword(value) {
+          const problem = describeFailure(value);
+          if (problem) throw new Error(problem);
+          return true;
+        },
+      },
 
       sessions: {
         // Strapi returns the refresh token in the JSON body instead of setting

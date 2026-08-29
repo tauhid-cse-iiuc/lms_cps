@@ -4,6 +4,7 @@ const seedRolesAndPermissions = require('./seed/roles');
 const seedDemoUsers = require('./seed/demo-users');
 const seedDemoContent = require('./seed/demo-content');
 const seedProviders = require('./seed/providers');
+const seedEmail = require('./seed/email');
 const signupPolicy = require('./utils/signup-policy');
 
 module.exports = {
@@ -88,6 +89,10 @@ module.exports = {
       // stays out of the way rather than putting it back on every restart.
       await seedDemoContent(strapi);
       await seedProviders(strapi);
+      // Last, and after the roles: it decides whether email confirmation is on,
+      // which changes what registration does, so it should not be half-applied
+      // if something above it failed.
+      await seedEmail(strapi);
     } catch (error) {
       strapi.log.error(
         '[seed] failed - the application would have started without working roles, so refusing to start'
