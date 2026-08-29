@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { setUserRoleAction } from '@/app/actions/manage';
 
+/** Must match ROLE_ORDER in the backend admin-panel controller. */
 const ROLES = [
   { value: 'admin', label: 'Admin' },
   { value: 'content-manager', label: 'Content Manager' },

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getCurrentUser, type RoleType } from '@/lib/auth';
+import { getCurrentUser, displayName, type RoleType } from '@/lib/auth';
 import {
   apiGet,
   type Enrollment,
@@ -40,8 +40,16 @@ export default async function DashboardPage() {
   let resume: { href: string; course: string; lesson: string; percentage: number } | null =
     null;
 
-  if (role === 'student' || role === 'instructor' || role === 'content-manager' || role === 'admin') {
-    // Everyone can be a learner, whatever else they are.
+  /**
+   * Learner figures, for the one role that is a learner.
+   *
+   * Staff used to be included here on the reasoning that an instructor might
+   * want to work through a course as a student sees it. The brief's permission
+   * matrix says otherwise - enrolling and taking quizzes are Student-only - and
+   * the backend now enforces exactly that, so asking for these as an Admin
+   * would be asking for a 403 and rendering zeroes.
+   */
+  if (role === 'student') {
     const [enrolRes, attemptRes] = await Promise.all([
       apiGet<{ data: Enrollment[] }>('/api/my/enrollments'),
       apiGet<{ data: AttemptSummary[] }>('/api/my/quiz-attempts'),
@@ -67,14 +75,12 @@ export default async function DashboardPage() {
     const completedLessons = live.reduce((n, x) => n + x.progress.completedLessons, 0);
     const finished = live.filter((x) => x.progress.percentage === 100).length;
 
-    if (role === 'student') {
-      stats.push(
-        { value: String(enrolments.length), label: 'courses enrolled', tone: 'text-teal-600' },
-        { value: String(completedLessons), label: 'lessons completed', tone: 'text-brand-600' },
-        { value: String(finished), label: 'courses finished', tone: 'text-violet-600' },
-        { value: String(attempts.length), label: 'quizzes taken', tone: 'text-amber-600' }
-      );
-    }
+    stats.push(
+      { value: String(enrolments.length), label: 'courses enrolled', tone: 'text-teal-600' },
+      { value: String(completedLessons), label: 'lessons completed', tone: 'text-brand-600' },
+      { value: String(finished), label: 'courses finished', tone: 'text-violet-600' },
+      { value: String(attempts.length), label: 'quizzes taken', tone: 'text-amber-600' }
+    );
 
     // The single most useful thing on the page: the next lesson to open.
     const inProgress = live
@@ -151,7 +157,7 @@ export default async function DashboardPage() {
           <div className="animate-rise">
             <p className="text-small text-ink-500">Welcome back</p>
             <h1 className="mt-1 text-display font-semibold tracking-tight">
-              {user.username}
+              {displayName(user)}
             </h1>
             <div className="mt-2">
               <Badge tone={theme.badge}>{user.role.name}</Badge>
@@ -305,7 +311,7 @@ const PANELS: Record<
       ['/dashboard/admin', 'Users and roles', 'Assign roles, with the last-admin guard.', 'bg-violet-50 text-violet-600'],
       ['/manage/courses', 'Manage courses', 'Create and edit any course on the platform.', 'bg-brand-50 text-brand-600'],
       ['/manage/blog', 'Manage the blog', 'Write posts and control what is published.', 'bg-amber-50 text-amber-600'],
-      ['/dashboard/learning', 'Your own learning', 'Courses you have enrolled in yourself.', 'bg-teal-50 text-teal-600'],
+      ['/courses', 'The catalogue', 'Every course on the platform.', 'bg-teal-50 text-teal-600'],
     ],
   },
   'content-manager': {
@@ -313,14 +319,14 @@ const PANELS: Record<
     links: [
       ['/manage/courses', 'Courses and lessons', 'Create and edit any course, not only your own.', 'bg-brand-50 text-brand-600'],
       ['/manage/blog', 'Blog posts', 'Write, publish and unpublish.', 'bg-amber-50 text-amber-600'],
-      ['/dashboard/learning', 'Your own learning', 'Courses you have enrolled in yourself.', 'bg-teal-50 text-teal-600'],
+      ['/courses', 'The catalogue', 'Every course on the platform.', 'bg-teal-50 text-teal-600'],
     ],
   },
   instructor: {
     heading: 'Your teaching',
     links: [
       ['/manage/courses', 'Create and edit courses', 'Your own courses, their lessons and quizzes.', 'bg-brand-50 text-brand-600'],
-      ['/dashboard/learning', 'Courses you are taking', 'Your progress as a student.', 'bg-teal-50 text-teal-600'],
+      ['/courses', 'The catalogue', 'Every course on the platform.', 'bg-teal-50 text-teal-600'],
     ],
   },
   student: {

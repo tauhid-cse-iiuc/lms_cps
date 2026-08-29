@@ -18,6 +18,15 @@ export default async function MyLearningPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
+  /**
+   * Learning pages are for the role that learns. Enrolling and taking quizzes
+   * are Student-only in the permission matrix, so for anyone else these
+   * endpoints answer 403 and the page could only ever render an empty state
+   * that looks like a bug. Sending them to their own dashboard says what is
+   * actually true: this is not their screen.
+   */
+  if (user.role.type !== 'student') redirect('/dashboard');
+
   const res = await apiGet<{ data: Enrollment[] }>('/api/my/enrollments');
   const enrollments = res.ok ? res.data.data : [];
 

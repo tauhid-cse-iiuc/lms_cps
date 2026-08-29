@@ -31,6 +31,29 @@ export default async function QuizPage({
   const user = await getCurrentUser();
   if (!user) redirect('/login');
 
+  /**
+   * Taking a quiz is Student-only in the permission matrix, and the backend
+   * enforces it: quiz.start answers 403 for every other role.
+   *
+   * Staff can still READ a quiz, so without this check the page would load,
+   * render the whole assessment, and fail only when the timer was requested -
+   * an instructor would sit down to a quiz that refuses to start. Saying so up
+   * front, and pointing at the editor, is the honest version.
+   */
+  if (user.role.type !== 'student') {
+    return (
+      <PageShell width="narrow">
+        <div className="pt-12">
+          <EmptyState
+            title="Quizzes are taken by students"
+            description="Your role can write and edit this quiz, but not sit it. Open it in the course editor to change its questions."
+            action={<Button href="/manage/courses">Your courses</Button>}
+          />
+        </div>
+      </PageShell>
+    );
+  }
+
   const res = await apiGet<{ data: Quiz }>(`/api/quizzes/${id}?populate=questions`);
 
   if (!res.ok) {

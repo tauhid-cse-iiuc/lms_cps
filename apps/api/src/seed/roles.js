@@ -1,6 +1,11 @@
 'use strict';
 
-const { ROLES, MANAGED_CONTENT_TYPES, DEFAULT_ROLE_TYPE } = require('./permission-matrix');
+const {
+  ROLES,
+  MANAGED_CONTENT_TYPES,
+  DEFAULT_ROLE_TYPE,
+  RETIRED_ROLE_TYPES,
+} = require('./permission-matrix');
 
 /**
  * Creates the application's roles and applies the permission matrix.
@@ -139,6 +144,55 @@ const setDefaultRole = async (strapi) => {
   return true;
 };
 
+/**
+ * Removes a role this application used to define.
+ *
+ * Order matters, and it is the reverse of what feels natural. The accounts are
+ * moved off the role FIRST, then the role is deleted - deleting it while users
+ * still point at it leaves them with a dangling role id, which Strapi reads as
+ * no role at all, and an account with no role cannot even reach the endpoint
+ * that would tell it who it is.
+ *
+ * The permission rows go too. They are ordinary rows keyed by role id, and
+ * nothing cleans them up on the role's behalf; left behind they accumulate as
+ * grants belonging to a role that no longer exists.
+ *
+ * Idempotent, like everything else here: on every boot after the first, the
+ * role is already gone and this does nothing.
+ */
+const retireRole = async (strapi, type, fallbackRoleId) => {
+  const role = await strapi.db.query('plugin::users-permissions.role').findOne({
+    where: { type },
+  });
+
+  if (!role) return 0;
+
+  const stranded = await strapi.db.query('plugin::users-permissions.user').findMany({
+    where: { role: role.id },
+  });
+
+  for (const user of stranded) {
+    await strapi.db.query('plugin::users-permissions.user').update({
+      where: { id: user.id },
+      data: { role: fallbackRoleId },
+    });
+  }
+
+  await strapi.db.query('plugin::users-permissions.permission').deleteMany({
+    where: { role: role.id },
+  });
+
+  await strapi.db.query('plugin::users-permissions.role').delete({
+    where: { id: role.id },
+  });
+
+  strapi.log.info(
+    `[seed] retired role "${type}"; moved ${stranded.length} account(s) to "${DEFAULT_ROLE_TYPE}"`
+  );
+
+  return stranded.length;
+};
+
 module.exports = async (strapi) => {
   const isManaged = buildManagedActionTest();
 
@@ -166,6 +220,18 @@ module.exports = async (strapi) => {
 
   if (await setDefaultRole(strapi)) {
     strapi.log.info(`[seed] self-registration now assigns the "${DEFAULT_ROLE_TYPE}" role`);
+  }
+
+  // Retiring happens after the loop above, so the role the stranded accounts are
+  // moved to is guaranteed to exist by the time anyone is moved onto it.
+  const fallback = await strapi.db.query('plugin::users-permissions.role').findOne({
+    where: { type: DEFAULT_ROLE_TYPE },
+  });
+
+  if (fallback) {
+    for (const type of RETIRED_ROLE_TYPES) {
+      await retireRole(strapi, type, fallback.id);
+    }
   }
 
   if (!createdRoles && !granted && !revoked) {

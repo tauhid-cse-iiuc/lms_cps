@@ -51,24 +51,6 @@ const CRUD = [...READ, ...WRITE];
 /** Expands a content type and a list of methods into action strings. */
 const on = (uid, methods) => methods.map((method) => `${uid}.${method}`);
 
-/**
- * What any signed-in account needs in order to LEARN, as opposed to teach or
- * administer.
- *
- * Staff hold these too. An instructor taking somebody else's course, or an admin
- * working through one to see what a student sees, is an ordinary thing to want -
- * and both dashboards link to it. Granting the reads without these made
- * "Courses you are taking" a link to a page that could never fill up.
- *
- * Safe to hand out, because the promotion in the enrollment controller only
- * moves an account UP from the default role: an instructor who enrols stays an
- * instructor.
- */
-const LEARNER = [
-  ...on(ENROLLMENT, ['create']),
-  ...on(COMPLETION, ['create', 'delete']),
-];
-
 // Custom endpoints, beyond the five a factory controller generates.
 //
 // These could only be added here once their controller method AND their route
@@ -93,6 +75,31 @@ const ADMIN_SET_ROLE = 'api::admin-panel.admin-panel.setUserRole'; // PUT /api/a
 
 // Answers before the caller has an account, so it belongs to Public.
 const ACCOUNT_AVAILABILITY = 'api::account.account.availability'; // GET /api/account/availability
+
+// About the caller's own account, so these go to every signed-in role instead.
+const ACCOUNT_PASSWORD_STATUS = 'api::account.account.passwordStatus'; // GET  /api/account/password-status
+const ACCOUNT_SET_PASSWORD = 'api::account.account.setPassword'; //     POST /api/account/set-password
+const ACCOUNT_PROFILE = 'api::account.account.updateProfile'; //        PUT  /api/account/profile
+
+/**
+ * The unauthenticated half of the password and confirmation flows.
+ *
+ * These have to be Public by definition - somebody who has forgotten their
+ * password cannot be signed in to ask for a reset, and a link clicked from an
+ * inbox arrives with no session at all.
+ *
+ * Strapi's own bootstrap grants some of these to Public on a fresh database,
+ * which is exactly why they are named here instead of being left to it: an
+ * action this matrix does not mention is an action the seed will not reconcile,
+ * so a permission removed by hand in the admin panel would stay removed and the
+ * repository would not say so. Listing them makes the seed put them back.
+ */
+const PASSWORD_RECOVERY = [
+  'plugin::users-permissions.auth.forgotPassword', //        POST /api/auth/forgot-password
+  'plugin::users-permissions.auth.resetPassword', //         POST /api/auth/reset-password
+  'plugin::users-permissions.auth.emailConfirmation', //     GET  /api/auth/email-confirmation
+  'plugin::users-permissions.auth.sendEmailConfirmation', // POST /api/auth/send-email-confirmation
+];
 
 // Publishing is a named action rather than a field - see the blog-post
 // controller. Granted alongside blog writes, and narrowed by owns-blog-post.
@@ -142,6 +149,14 @@ const SESSION = [
   // Creating and deleting roles stays ungranted, so the permission model itself
   // cannot be edited through the API.
   'plugin::users-permissions.role.find',
+  // Reading whether you have a password, and setting a first one. Needed by
+  // every role because any account can be a Google account - see the account
+  // controller for why setting a first password cannot go through
+  // auth.changePassword.
+  ACCOUNT_PASSWORD_STATUS,
+  ACCOUNT_SET_PASSWORD,
+  // Editing your own display name. Every role has one to edit.
+  ACCOUNT_PROFILE,
 ];
 
 const ROLES = [
@@ -152,8 +167,6 @@ const ROLES = [
       'Full platform control, including user management and role assignment. This is an application role, not a Strapi admin-panel role - an Admin has no access to /admin.',
     permissions: [
       ...SESSION,
-      ...LEARNER,
-      ENROLLMENT_MINE,
       ...USER_READ,
       ...USER_WRITE,
       ...on(COURSE, CRUD),
@@ -170,11 +183,10 @@ const ROLES = [
       ...on(COMPLETION, READ),
       ...on(ATTEMPT, READ),
       COURSE_MINE,
-      COURSE_PROGRESS,
-      COURSE_RESET,
+      // Progress of the students on a course. NOT course.progress, which
+      // reports the CALLER's own progress and would be permanently empty for a
+      // role that cannot enrol.
       COURSE_STUDENTS,
-      QUIZ_START,
-      QUIZ_SUBMIT,
       // Admin only, and additionally guarded by the is-admin policy on each
       // route - these are where being wrong means somebody promotes themselves.
       ADMIN_STATS,
@@ -191,8 +203,6 @@ const ROLES = [
     description: 'Creates and manages all course content and blog posts, but cannot manage users.',
     permissions: [
       ...SESSION,
-      ...LEARNER,
-      ENROLLMENT_MINE,
       // Any course, not just their own - that is what separates a Content
       // Manager from an Instructor.
       ...on(COURSE, CRUD),
@@ -205,7 +215,6 @@ const ROLES = [
       ...on(COMPLETION, READ),
       ...on(ATTEMPT, READ),
       COURSE_MINE,
-      COURSE_PROGRESS,
       COURSE_STUDENTS,
       BLOG_PUBLISH,
       BLOG_UNPUBLISH,
@@ -218,8 +227,6 @@ const ROLES = [
     description: 'Creates and manages their own courses, lessons and quizzes, and sees the progress of students enrolled in them.',
     permissions: [
       ...SESSION,
-      ...LEARNER,
-      ENROLLMENT_MINE,
       // Narrowed by is-owner-or-manager: writes are rejected unless
       // course.owner is the authenticated user.
       ...on(COURSE, CRUD),
@@ -236,40 +243,7 @@ const ROLES = [
       ...on(BLOG, READ),
       // Their own courses, and how their students are doing on them.
       COURSE_MINE,
-      COURSE_PROGRESS,
-      COURSE_RESET,
       COURSE_STUDENTS,
-      QUIZ_START,
-      QUIZ_SUBMIT,
-    ],
-  },
-
-  {
-    /**
-     * Where every new account starts.
-     *
-     * It is NOT Strapi's built-in Public role, and that distinction matters.
-     * Public is the role used for unauthenticated requests; a signed-in user
-     * holding it would have no user.me, no auth.logout and no role.find, so
-     * getCurrentUser would answer 403 and the application would decide they were
-     * signed out - the exact failure the SESSION grants exist to prevent.
-     *
-     * So this is a real role with a real session, holding only what a browsing
-     * visitor needs: read the catalogue, read the blog, and enrol. Enrolling in
-     * anything promotes the account to Student - see the enrollment controller.
-     */
-    type: 'visitor',
-    name: 'Visitor',
-    description:
-      'A signed-in account that has not enrolled in anything yet. Enrolling in any course promotes it to Student automatically.',
-    permissions: [
-      ...SESSION,
-      // The same public reading a signed-out visitor gets...
-      ...on(COURSE, READ),
-      ...on(BLOG, READ),
-      // ...plus the one action that changes their status.
-      ...on(ENROLLMENT, ['find', 'findOne', 'create']),
-      ENROLLMENT_MINE,
     ],
   },
 
@@ -339,6 +313,8 @@ const ROLES = [
       ...on(BLOG, READ),
       // The sign-up form needs this before its user exists.
       ACCOUNT_AVAILABILITY,
+      // Forgotten passwords and confirmation links arrive without a session.
+      ...PASSWORD_RECOVERY,
     ],
   },
 
@@ -358,19 +334,30 @@ const ROLES = [
 /**
  * The role new self-registered accounts receive.
  *
- * Deliberately not Student: signing up is not the same as being a learner, and
- * an account that has never enrolled in anything has no business holding lesson
- * or quiz permissions. Enrolling is what makes someone a Student, and the
- * enrollment controller performs that promotion.
+ * Student, not Public: Public is the role Strapi uses for UNAUTHENTICATED
+ * requests, and it holds none of the session endpoints - no users.me, no
+ * auth.logout. A signed-in account holding it would get 403 from
+ * /api/users/me, which this application reads as "not signed in", so every
+ * sign-up would land in a login loop. The two roles grant similar reading; they
+ * are not interchangeable, because only one of them can be held by a session.
  */
-const DEFAULT_ROLE_TYPE = 'visitor';
+const DEFAULT_ROLE_TYPE = 'student';
 
-/** What a Visitor becomes the moment they enrol in anything. */
-const PROMOTED_ROLE_TYPE = 'student';
+/**
+ * Roles this application used to define and no longer does.
+ *
+ * Roles live in the database, not the repository, so deleting one from the
+ * matrix above does not remove it from an already-deployed instance: the role
+ * row stays, its permissions stay, and any account holding it keeps a role the
+ * code no longer knows about. The seed names its retirements explicitly - it
+ * does not delete every role it did not create, because Strapi's own built-ins
+ * are in that set too.
+ */
+const RETIRED_ROLE_TYPES = ['visitor'];
 
 module.exports = {
   ROLES,
   MANAGED_CONTENT_TYPES,
   DEFAULT_ROLE_TYPE,
-  PROMOTED_ROLE_TYPE,
+  RETIRED_ROLE_TYPES,
 };

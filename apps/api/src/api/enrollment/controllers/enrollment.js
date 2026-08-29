@@ -21,42 +21,6 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 const { roleOf, isManager } = require('../../../utils/authorization');
 const { scopedFind } = require('../../../utils/scoped-find');
-const { DEFAULT_ROLE_TYPE, PROMOTED_ROLE_TYPE } = require('../../../seed/permission-matrix');
-
-/**
- * Promotes a Visitor to Student the first time they enrol.
- *
- * Signing up and being a learner are different things: an account that has never
- * enrolled has no business holding lesson or quiz permissions, so new accounts
- * start as Visitor and earn Student by doing the one thing that makes them one.
- *
- * Only ever promotes UP from the default role. An Instructor or an Admin
- * enrolling in a course to see what a student sees must not be quietly demoted
- * to Student - which is what a blanket "set role to student on enrol" would do,
- * and it would take their own courses away from them.
- */
-const promoteOnFirstEnrolment = async (strapi, user) => {
-  if (user?.role?.type !== DEFAULT_ROLE_TYPE) return false;
-
-  const target = await strapi.db.query('plugin::users-permissions.role').findOne({
-    where: { type: PROMOTED_ROLE_TYPE },
-  });
-
-  if (!target) {
-    strapi.log.warn(
-      `[enrolment] cannot promote ${user.email}: no "${PROMOTED_ROLE_TYPE}" role`
-    );
-    return false;
-  }
-
-  await strapi.db.query('plugin::users-permissions.user').update({
-    where: { id: user.id },
-    data: { role: target.id },
-  });
-
-  strapi.log.info(`[enrolment] promoted ${user.email} to ${PROMOTED_ROLE_TYPE}`);
-  return true;
-};
 
 module.exports = createCoreController('api::enrollment.enrollment', ({ strapi }) => ({
   /**
@@ -120,8 +84,6 @@ module.exports = createCoreController('api::enrollment.enrollment', ({ strapi })
         populate: ['course'],
       });
 
-      await promoteOnFirstEnrolment(strapi, user);
-
       return { data: created };
     } catch (error) {
       // The race arrived. Someone else's identical request won; treat that as
@@ -130,7 +92,6 @@ module.exports = createCoreController('api::enrollment.enrollment', ({ strapi })
         where: { student: user.id, course: course.id },
       });
       if (raced) {
-        await promoteOnFirstEnrolment(strapi, user);
         return { data: raced };
       }
       throw error;
