@@ -33,9 +33,16 @@ import {
 const STRAPI_URL = process.env.STRAPI_URL ?? 'http://localhost:1337';
 
 /** Pages that require a session. */
-const PROTECTED = ['/dashboard'];
-/** Pages that make no sense once you already have one. */
-const AUTH_PAGES = ['/login', '/register'];
+const PROTECTED = ['/dashboard', '/account', '/create-password'];
+/**
+ * Pages that make no sense once you already have one.
+ *
+ * /reset-password is deliberately NOT here. Someone following a reset link may
+ * still have a live session in that browser - that is exactly the case where a
+ * password is forgotten rather than lost - and bouncing them to the dashboard
+ * would make the emailed link do nothing.
+ */
+const AUTH_PAGES = ['/login', '/register', '/forgot-password'];
 
 const startsWithAny = (pathname: string, prefixes: string[]) =>
   prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -80,7 +87,40 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const signedIn = Boolean(accessToken);
+  /**
+   * Holding a cookie is not the same as having a session.
+   *
+   * An access token can be dead while its cookie is very much alive - the
+   * session was revoked, the account was deleted, the backend's JWT secret
+   * changed. Treating "cookie present" as "signed in" then produces a loop
+   * nobody can escape from inside the browser: /register redirects to
+   * /dashboard, the dashboard finds no user and redirects to /login, /login is
+   * an auth page so the middleware redirects it back to /dashboard, forever.
+   *
+   * So the token is VERIFIED before it is allowed to bounce anyone off an auth
+   * page, and cleared when it turns out to be dead. That costs one request, and
+   * only on /login, /register and /forgot-password - the three pages where
+   * being wrong is unrecoverable. Everywhere else a dead token is harmless:
+   * the page asks who the caller is, gets nobody, and handles it.
+   */
+  let signedIn = Boolean(accessToken);
+
+  if (signedIn && startsWithAny(pathname, AUTH_PAGES)) {
+    try {
+      const res = await fetch(`${STRAPI_URL}/api/users/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
+
+      if (!res.ok) {
+        signedIn = false;
+        refreshFailed = true; // clears both cookies below
+      }
+    } catch {
+      // Backend unreachable. Leave the session alone and let them see the form;
+      // an outage of ours must not delete somebody's credentials.
+    }
+  }
 
   const redirectTo = (path: string) => {
     const url = request.nextUrl.clone();

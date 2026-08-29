@@ -47,6 +47,29 @@ async function request<T>(
     };
   }
 
+  /**
+   * A 401 means the token we sent is not a session any more - expired, revoked,
+   * or belonging to an account that no longer exists.
+   *
+   * Retrying without it matters because this helper attaches the token to
+   * EVERY call, public reads included. A visitor whose session died would
+   * otherwise watch the course catalogue and the blog empty themselves: the
+   * data is public, the request is refused, and nothing on screen explains why.
+   *
+   * The retry is anonymous, so genuinely protected data still comes back 401 or
+   * 403 the second time and the caller handles it exactly as before. Nothing is
+   * exposed that a signed-out visitor could not already read.
+   */
+  if (res.status === 401 && token) {
+    headers.delete('Authorization');
+
+    try {
+      res = await fetch(`${STRAPI_URL}${path}`, { ...init, headers, cache: 'no-store' });
+    } catch {
+      // Keep the original 401 and fall through to the error handling below.
+    }
+  }
+
   if (res.status === 204) {
     return { ok: true, data: undefined as T, status: res.status };
   }
@@ -89,6 +112,19 @@ export type Course = {
   lessonCount?: number;
   quizCount?: number;
   studentCount?: number;
+  /**
+   * Whether the CALLER may edit this course. Computed by the backend on
+   * findOne, because `owner` is stripped from the response for every role
+   * except Admin - see the course controller.
+   */
+  canManage?: boolean;
+  /**
+   * The instructor's display name. A plain string, not the `owner` relation:
+   * Strapi strips relations pointing at users for every role except Admin, so
+   * `owner` is empty for the people who actually read the catalogue. The
+   * backend denormalises the username onto the response instead.
+   */
+  ownerName?: string | null;
 };
 
 export type Lesson = {
@@ -172,4 +208,6 @@ export type BlogPost = {
   body?: string | null;
   publishedAt?: string | null;
   author?: { username: string } | null;
+  /** The author's display name. Same reasoning as `Course.ownerName`. */
+  authorName?: string | null;
 };
