@@ -72,9 +72,13 @@ export default async function HomePage() {
           <ol className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, i) => (
               <li key={step.title} className="relative">
+                {/* Decorative, and previously ink-200 on a near-white panel -
+                    which is a step counter you have to hunt for. Tinted with
+                    the brand gradient instead: legible at a glance, still
+                    clearly subordinate to the heading under it. */}
                 <span
                   aria-hidden
-                  className="text-mega font-semibold leading-none text-ink-200"
+                  className="inline-block bg-gradient-to-br from-brand-500 to-violet-500 bg-clip-text text-mega font-semibold leading-none text-transparent"
                 >
                   {i + 1}
                 </span>
@@ -88,75 +92,17 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Feature detail. A bento grid rather than equal columns, because these
-          are not equally important and pretending otherwise helps nobody. */}
+      {/* Feature detail. Two equal tiles, because they are two equal claims. */}
       <section className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
         <h2 className="max-w-2xl text-display font-semibold tracking-tight">
-          Made for four kinds of people.
+          The details that matter.
         </h2>
         <p className="mt-3 max-w-xl text-lead text-ink-600">
-          What you can do depends on who you are, and that is decided by the
-          server rather than by which buttons happen to be on screen.
+          Two things a learning platform has to get right: where your progress
+          comes from, and where the answers live.
         </p>
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-3">
-          <article className="group relative isolate overflow-hidden rounded-2xl bg-night-900 p-8 text-white shadow-lift lg:col-span-2">
-            <div
-              aria-hidden
-              className="bg-aurora-night animate-hue absolute inset-0 -z-10 opacity-80"
-            />
-            <span
-              aria-hidden
-              className="grid h-11 w-11 place-items-center rounded-xl border border-white/15 bg-white/10 backdrop-blur"
-            >
-              <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5">
-                <path
-                  d="M10 2.5 4 5v4.5c0 3.4 2.4 6.5 6 8 3.6-1.5 6-4.6 6-8V5l-6-2.5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="m7.5 10 1.8 1.8 3.4-3.6"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-
-            <h3 className="mt-6 text-title font-semibold">
-              Access you can rely on
-            </h3>
-            <p className="mt-3 max-w-md leading-relaxed text-white/70">
-              Students reach the courses they are enrolled in. Instructors manage
-              their own and can see how their students are doing. Content
-              managers look after all content; administrators manage people.
-              Every one of those lines is enforced by the API, so what you see is
-              genuinely what you are allowed to have.
-            </p>
-
-            <ul className="mt-8 grid gap-3 border-t border-white/10 pt-6 sm:grid-cols-2">
-              {ROLE_NOTES.map((note) => (
-                <li key={note.role} className="flex gap-3">
-                  <span
-                    aria-hidden
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${note.dot}`}
-                  />
-                  <span>
-                    <span className="block text-small font-semibold">
-                      {note.role}
-                    </span>
-                    <span className="block text-micro text-white/50">
-                      {note.can}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </article>
-
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
           {SIDE_TILES.map((tile) => (
             <article
               key={tile.title}
@@ -241,13 +187,6 @@ const STEPS = [
     title: 'Prove it',
     body: 'Take the quiz. Your result is stored and stays viewable later.',
   },
-];
-
-const ROLE_NOTES = [
-  { role: 'Student', can: 'Enrol, learn, take quizzes', dot: 'bg-teal-500' },
-  { role: 'Instructor', can: 'Own courses, see their students', dot: 'bg-brand-500' },
-  { role: 'Content Manager', can: 'All course content and the blog', dot: 'bg-amber-500' },
-  { role: 'Admin', can: 'People and roles', dot: 'bg-violet-500' },
 ];
 
 const SIDE_TILES = [

@@ -56,9 +56,27 @@ export function SiteFooter() {
           <p className="text-micro text-white/40">
             &copy; {year} LMS. Built as a project-round submission.
           </p>
-          <p className="text-micro text-white/40">
-            Next.js on Vercel · Strapi on Railway
-          </p>
+
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Reachable from every page, not only from the sign-up form: the
+                terms are worth as much to someone deciding whether to stay as
+                to someone deciding whether to join. */}
+            <Link
+              href="/terms"
+              className="text-micro text-white/40 transition-colors hover:text-white"
+            >
+              Terms
+            </Link>
+            <Link
+              href="/privacy"
+              className="text-micro text-white/40 transition-colors hover:text-white"
+            >
+              Privacy
+            </Link>
+            <p className="text-micro text-white/40">
+              Next.js on Vercel · Strapi on Railway
+            </p>
+          </div>
         </div>
       </div>
     </footer>

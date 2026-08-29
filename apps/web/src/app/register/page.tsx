@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { AuthForm } from '@/components/auth-form';
 import { GoogleButton } from '@/components/google-button';
+import { LegalConsent } from '@/components/legal-consent';
 
 export const metadata = { title: 'Create account' };
 
@@ -19,6 +20,8 @@ export default function RegisterPage() {
         <AuthForm mode="register" />
 
         <GoogleButton label="Sign up with Google" />
+
+        <LegalConsent />
 
         <p className="mt-6 text-small text-ink-500">
           Already registered?{' '}
