@@ -39,7 +39,9 @@ export default async function BlogPostPage({
 
       <article className="animate-rise mt-6">
         <div className="flex flex-wrap items-center gap-2 text-micro text-ink-400">
-          {post.author?.username && <span>by {post.author.username}</span>}
+          {(post.authorName ?? post.author?.username) && (
+            <span>by {post.authorName ?? post.author?.username}</span>
+          )}
           {post.publishedAt ? (
             <>
               <span aria-hidden>·</span>

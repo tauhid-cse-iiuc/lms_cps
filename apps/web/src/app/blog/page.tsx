@@ -79,7 +79,9 @@ export default async function BlogPage() {
 
 function PostMeta({ post }: { post: BlogPost }) {
   const parts = [
-    post.author?.username ? `by ${post.author.username}` : null,
+    post.authorName ?? post.author?.username
+      ? `by ${post.authorName ?? post.author?.username}`
+      : null,
     post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : null,
   ].filter(Boolean);
 

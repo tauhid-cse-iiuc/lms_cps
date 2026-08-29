@@ -12,6 +12,50 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 const { isAdmin, roleOf } = require('../../../utils/authorization');
 
+/**
+ * What to print as a byline.
+ *
+ * `name` is the person's actual name and `username` is the handle they sign in
+ * with, so the name is preferred and the handle is the fallback for accounts
+ * that have not set one - including every account created before the field
+ * existed.
+ */
+const displayName = (user) => user?.name?.trim() || user?.username || null;
+
+/**
+ * Attaches the author's display name as a plain string.
+ *
+ * Same reason as the course byline: `author` is a relation to a user, and
+ * Strapi drops relations the reader may not read - which is everyone except an
+ * Admin. Populating it harder does not help; the field is removed after the
+ * query, not skipped during it. A denormalised username carries what a byline
+ * needs without granting anyone the ability to read the user table.
+ */
+const withAuthorName = async (strapi, entries) => {
+  const rows = Array.isArray(entries) ? entries : [entries];
+  const ids = rows.map((row) => row?.documentId).filter(Boolean);
+
+  if (ids.length === 0) return;
+
+  const posts = await strapi.db.query('api::blog-post.blog-post').findMany({
+    where: { documentId: { $in: ids } },
+    populate: ['author'],
+  });
+
+  // One post has two rows when it has a draft and a published version, and both
+  // share a documentId. Either row's author is the same person, so first wins.
+  const nameByDocument = new Map();
+  for (const post of posts) {
+    if (!nameByDocument.has(post.documentId)) {
+      nameByDocument.set(post.documentId, displayName(post.author));
+    }
+  }
+
+  for (const row of rows) {
+    if (row) row.authorName = nameByDocument.get(row.documentId) ?? null;
+  }
+};
+
 module.exports = createCoreController('api::blog-post.blog-post', ({ strapi }) => ({
   /**
    * Author comes from the token, never the body - the same rule as course
@@ -66,14 +110,22 @@ module.exports = createCoreController('api::blog-post.blog-post', ({ strapi }) =
     if (!canSeeDrafts(ctx)) {
       ctx.query = { ...ctx.query, status: 'published' };
     }
-    return super.find(ctx);
+
+    const response = await super.find(ctx);
+    if (response?.data) await withAuthorName(strapi, response.data);
+
+    return response;
   },
 
   async findOne(ctx) {
     if (!canSeeDrafts(ctx)) {
       ctx.query = { ...ctx.query, status: 'published' };
     }
-    return super.findOne(ctx);
+
+    const response = await super.findOne(ctx);
+    if (response?.data) await withAuthorName(strapi, response.data);
+
+    return response;
   },
 
   /**

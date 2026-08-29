@@ -9,6 +9,10 @@ import type { Course } from '@/lib/api';
  * a change to how a course looks happens once.
  */
 export function CourseCard({ course }: { course: Course }) {
+  // `ownerName` is what the backend sends; `owner` only ever arrives for an
+  // Admin, so it is a fallback rather than the source.
+  const instructor = course.ownerName ?? course.owner?.username ?? null;
+
   return (
     <Link href={`/courses/${course.documentId}`} className="group block h-full">
       <article className="ring-gradient flex h-full flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-soft transition-all duration-200 hover:-translate-y-1.5 hover:shadow-lift">
@@ -26,17 +30,17 @@ export function CourseCard({ course }: { course: Course }) {
           )}
 
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-ink-100 pt-3">
-            {course.owner?.username ? (
+            {instructor ? (
               <span className="flex min-w-0 items-center gap-2">
                 <span
                   aria-hidden
                   className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[0.6rem] font-semibold text-white"
-                  style={{ background: hueFor(course.owner.username) }}
+                  style={{ background: hueFor(instructor) }}
                 >
-                  {course.owner.username.slice(0, 2).toUpperCase()}
+                  {instructor.slice(0, 2).toUpperCase()}
                 </span>
                 <span className="truncate text-micro text-ink-500">
-                  {course.owner.username}
+                  {instructor}
                 </span>
               </span>
             ) : (

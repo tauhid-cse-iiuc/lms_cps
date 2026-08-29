@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { apiGet, type Course, type Enrollment, type Progress, type Quiz } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 import { ProgressBar } from '@/components/progress-bar';
@@ -27,10 +27,13 @@ export async function generateMetadata({
  */
 export default async function CoursePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ preview?: string }>;
 }) {
   const { id } = await params;
+  const { preview } = await searchParams;
   const user = await getCurrentUser();
 
   const courseRes = await apiGet<{ data: Course }>(`/api/courses/${id}?populate=owner`);
@@ -40,7 +43,10 @@ export default async function CoursePage({
   let enrolled = false;
   let progress: Progress | null = null;
 
-  if (user) {
+  // Only a student has enrolments or progress to fetch. Both endpoints are
+  // Student-only now, so asking as anyone else spends two requests to be told
+  // 403 twice.
+  if (user?.role.type === 'student') {
     const mine = await apiGet<{ data: Enrollment[] }>('/api/my/enrollments');
     if (mine.ok) enrolled = mine.data.data.some((e) => e.course?.documentId === id);
 
@@ -50,11 +56,46 @@ export default async function CoursePage({
     }
   }
 
-  const isOwner = Boolean(user && course.owner?.id === user.id);
+  /**
+   * `owner` is present only for an Admin - Strapi strips relations the reader
+   * may not read - so ownership comes from the backend's own verdict instead.
+   * The fallback keeps working for the one role that does receive `owner`.
+   */
+  const canManage = Boolean(user && (course.canManage ?? course.owner?.id === user.id));
+  const instructor = course.ownerName ?? course.owner?.username ?? null;
   const isStaff = Boolean(user && ['admin', 'content-manager'].includes(user.role.type));
+  // Enrolling is Student-only in the permission matrix, so the button is shown
+  // to nobody else. Offering it to an instructor would be offering a control
+  // the API answers 403 to.
+  const isLearner = user?.role.type === 'student';
+
+  /**
+   * Anyone who can EDIT this course is sent to the editor instead.
+   *
+   * The catalogue page is a shop window - enrol, resume, see what is covered -
+   * and none of those are things its author does. An instructor opening their
+   * own course wants the thing they came to change, not a read-only view of it
+   * with an Edit button somewhere below the fold.
+   *
+   * Ownership decides it, not role: an instructor is redirected for their own
+   * courses and lands on the public page for everyone else's, which is the
+   * only page the API will let them use. Admins and Content Managers may edit
+   * any course, so they are redirected for all of them.
+   *
+   * `?preview=1` opts out, which is what the "View public page" link on the
+   * editor uses. Without it the catalogue entry would be unreachable for the
+   * very people responsible for how it reads.
+   */
+  if (canManage && !preview) {
+    redirect(`/manage/courses/${id}`);
+  }
+
+  // Enrolled students take quizzes; nobody else can, so nobody else is offered
+  // the link. Mirrors the permission matrix rather than guessing at it.
+  const canTake = isLearner && enrolled;
 
   let quizzes: Quiz[] = [];
-  if (enrolled || isOwner || isStaff) {
+  if (enrolled || canManage) {
     const q = await apiGet<{ data: Quiz[] }>(
       `/api/quizzes?filters[course][documentId][$eq]=${id}`
     );
@@ -75,15 +116,15 @@ export default async function CoursePage({
       <header className="animate-rise mt-4">
         <div className="flex flex-wrap items-center gap-2">
           {enrolled && <Badge tone="success">Enrolled</Badge>}
-          {isOwner && <Badge>Your course</Badge>}
-          {isStaff && !isOwner && <Badge tone="muted">Staff view</Badge>}
+          {canManage && !isStaff && <Badge>Your course</Badge>}
+          {isStaff && <Badge tone="muted">Staff view</Badge>}
         </div>
 
         <h1 className="mt-3 text-display font-semibold tracking-tight">
           {course.title}
         </h1>
-        {course.owner?.username && (
-          <p className="mt-1 text-small text-ink-500">by {course.owner.username}</p>
+        {instructor && (
+          <p className="mt-1 text-small text-ink-500">by {instructor}</p>
         )}
         {course.description && (
           <p className="mt-4 text-lead leading-relaxed text-ink-700">
@@ -103,7 +144,7 @@ export default async function CoursePage({
         </Card>
       )}
 
-      {user && !enrolled && !isOwner && !isStaff && (
+      {isLearner && !enrolled && !canManage && (
         <div className="animate-rise mt-8">
           <EnrollButton courseId={course.documentId} />
         </div>
@@ -177,23 +218,46 @@ export default async function CoursePage({
         <section className="animate-rise mt-10" style={{ animationDelay: '0.1s' }}>
           <h2 className="text-title font-semibold">Quizzes</h2>
           <ul className="mt-4 space-y-2">
-            {quizzes.map((quiz) => (
-              <li key={quiz.documentId}>
-                <Link href={`/quiz/${quiz.documentId}`}>
-                  <Card interactive className="flex items-center justify-between gap-4 px-4 py-3.5">
-                    <span className="text-small font-medium">{quiz.title}</span>
-                    <span className="text-micro text-ink-500">
-                      {quiz.questions?.length ?? 0} questions
-                    </span>
-                  </Card>
-                </Link>
-              </li>
-            ))}
+            {quizzes.map((quiz) => {
+              const row = (
+                <Card
+                  interactive={canTake}
+                  className="flex items-center justify-between gap-4 px-4 py-3.5"
+                >
+                  <span className="text-small font-medium">{quiz.title}</span>
+                  <span className="text-micro text-ink-500">
+                    {quiz.questions?.length ?? 0} questions
+                  </span>
+                </Card>
+              );
+
+              return (
+                <li key={quiz.documentId}>
+                  {/* A link only for someone who can actually take it. Taking a
+                      quiz is Student-only, so for staff this is a statement of
+                      what the course contains, not a control - and a card that
+                      lifts on hover and then 403s is a worse answer than a card
+                      that never claimed to be clickable. */}
+                  {canTake ? (
+                    <Link href={`/quiz/${quiz.documentId}`}>{row}</Link>
+                  ) : (
+                    row
+                  )}
+                </li>
+              );
+            })}
           </ul>
+
+          {canManage && (
+            <p className="mt-3 text-micro text-ink-500">
+              Quizzes are taken by enrolled students. Write and edit them in the
+              course editor.
+            </p>
+          )}
         </section>
       )}
 
-      {(isOwner || isStaff) && (
+      {canManage && (
         <section className="mt-12 border-t border-ink-200 pt-6">
           <h2 className="text-small font-semibold text-ink-500">Manage</h2>
           <div className="mt-3 flex flex-wrap gap-3">

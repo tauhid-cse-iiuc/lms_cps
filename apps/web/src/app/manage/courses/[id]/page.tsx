@@ -36,9 +36,17 @@ export default async function ManageCoursePage({
         description="Edit the course, its lessons and its quizzes."
         back={{ href: '/manage/courses', label: 'Your courses' }}
         action={
-          <Button href={`/manage/courses/${id}/students`} variant="secondary">
-            Enrolled students
-          </Button>
+          <div className="flex gap-2">
+            {/* The escape hatch from the redirect on the catalogue page: the
+                people who write a course description are the ones who most need
+                to see how it reads to a visitor. */}
+            <Button href={`/courses/${id}?preview=1`} variant="secondary">
+              View public page
+            </Button>
+            <Button href={`/manage/courses/${id}/students`} variant="secondary">
+              Enrolled students
+            </Button>
+          </div>
         }
       />
 

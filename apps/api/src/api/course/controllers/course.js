@@ -15,6 +15,53 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 const { isManager } = require('../../../utils/authorization');
 
+/**
+ * What to print as a byline.
+ *
+ * `name` is the person's actual name and `username` is the handle they sign in
+ * with, so the name is preferred and the handle is the fallback for accounts
+ * that have not set one - including every account created before the field
+ * existed.
+ */
+const displayName = (user) => user?.name?.trim() || user?.username || null;
+
+/**
+ * Attaches the owner's display name as a plain string.
+ *
+ * `owner` is a relation to a user, and Strapi drops relations the reader is not
+ * allowed to read - a rule that applies to the whole users collection, which
+ * only an Admin holds `users-permissions.user.find` for. So `?populate=owner`
+ * quietly returns nothing for students, instructors and content managers, and
+ * "by Jane" renders as empty space on the catalogue for almost everybody.
+ *
+ * The fix is not to hand out that permission. Reading one course should not
+ * come with the ability to enumerate every account on the platform. A single
+ * denormalised string carries exactly what the page needs to print and nothing
+ * else - no id, no email, no role - and a username is already public on every
+ * course card and blog post by design.
+ */
+const withOwnerName = async (strapi, entries) => {
+  const rows = Array.isArray(entries) ? entries : [entries];
+  const ids = rows.map((row) => row?.documentId).filter(Boolean);
+
+  if (ids.length === 0) return;
+
+  // One query for the whole page rather than one per row.
+  const owned = await strapi.db.query('api::course.course').findMany({
+    where: { documentId: { $in: ids } },
+    populate: ['owner'],
+  });
+
+  const nameByDocument = new Map(
+    owned.map((course) => [course.documentId, displayName(course.owner)])
+  );
+
+  for (const row of rows) {
+    if (row) row.ownerName = nameByDocument.get(row.documentId) ?? null;
+  }
+};
+
+
 module.exports = createCoreController('api::course.course', ({ strapi }) => ({
   /**
    * Create a course, owned by whoever is holding the token.
@@ -81,6 +128,51 @@ module.exports = createCoreController('api::course.course', ({ strapi }) => ({
     }
 
     return super.update(ctx);
+  },
+
+  /**
+   * One course, plus whether the CALLER may edit it.
+   *
+   * The flag has to come from the server, because the frontend cannot work it
+   * out. Strapi sanitises every response against the reader's own permissions
+   * and DROPS relations they may not read - and `owner` points at a user, which
+   * only an Admin holds `users-permissions.user.find` for. So
+   * `?populate=owner` returns the owner to an Admin and silently omits it for
+   * an Instructor, which means "is this mine?" answered on the client is always
+   * false for the one role that most needs it to be true.
+   *
+   * A boolean about the caller leaks nothing: it says what the API would let
+   * this reader do, which they can discover by trying anyway.
+   */
+  async findOne(ctx) {
+    const response = await super.findOne(ctx);
+
+    if (!response?.data) return response;
+
+    const course = await strapi.documents('api::course.course').findOne({
+      documentId: ctx.params.id,
+      populate: ['owner'],
+    });
+
+    // The byline is public - a signed-out visitor browsing the catalogue sees
+    // who teaches a course, the same as they see its title.
+    response.data.ownerName = displayName(course?.owner);
+
+    const user = ctx.state.user;
+    if (!user) return response;
+
+    response.data.canManage = isManager(ctx) || course?.owner?.id === user.id;
+
+    return response;
+  },
+
+  /** The catalogue, each course carrying its instructor's name. */
+  async find(ctx) {
+    const response = await super.find(ctx);
+
+    if (response?.data) await withOwnerName(strapi, response.data);
+
+    return response;
   },
 
   /**
