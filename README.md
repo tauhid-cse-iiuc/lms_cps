@@ -45,6 +45,16 @@ for the admin panel, and 34 through the running web app.
 | ✅ | Admin dashboard — user list, role assignment, platform statistics |
 | ✅ | Blog with draft/published states |
 
+**Beyond the brief**
+
+| | |
+|---|---|
+| ✅ | Email verification on sign-up, and password reset by emailed link (Gmail SMTP) |
+| ✅ | Google sign-in, with the option to add a password so either route works |
+| ✅ | Display name separate from the sign-in username, editable from the account page |
+| ✅ | Password rules enforced server-side on every route that sets one |
+| ✅ | Terms of Service and Privacy Policy pages, linked from sign-up |
+
 ---
 
 ## Roles and permissions
@@ -61,8 +71,16 @@ for the admin panel, and 34 through the running web app.
 | Take quizzes | ❌ | ❌ | ❌ | ✅ |
 
 Where "own" appears, ownership is checked against the authenticated user on the **server**, not by
-hiding buttons in the UI. Blog posts follow the same rule: a Content Manager manages the posts they
-authored, an Admin manages every post including other people's.
+hiding buttons in the UI.
+
+Blog posts follow the same rule: a Content Manager manages the posts they authored, an Admin manages
+every post including other people's. That reading is a deliberate choice, because the brief can be
+read two ways — the matrix marks the Content Manager with a plain ✅, while the prose says *"Admin
+has full control over every blog post (including others'); Content Manager manages the posts they
+can create"*. Only the narrower reading gives the Admin clause anything to say, and "access must
+differ strictly by role" argues for the stricter of two defensible options. Reading is not scoped
+the same way: any Content Manager can see a colleague's draft, because the brief requires drafts to
+be hidden from students and the public, not from the people who run the content library.
 
 ---
 
@@ -136,12 +154,30 @@ Both apps ship a documented `.env.example`. The ones worth explaining:
 | `IS_PROXIED` | api | `true` behind Railway's HTTPS edge, so Strapi emits `https://` links and `Secure` cookies |
 | `CORS_ORIGINS` | api | Comma-separated list of browser origins allowed to call the API |
 | `STRAPI_URL` | web | Backend address for **server-side** calls; never sent to the browser |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | api | Gmail address and **app password**. Unset = email features stay off |
+| `EMAIL_FROM` | api | The From address. Keep it the same as `SMTP_USERNAME` — Gmail rewrites it otherwise |
 
 `PUBLIC_URL` must include its scheme. Strapi decides how to interpret the value by testing whether
 it starts with `http`; without a scheme it treats the value as a URL *path*, prepends a slash, and
 stamps it onto every admin-panel asset URL, producing a blank admin page with no error message.
 `apps/api/config/server.js` validates this at startup and fails with a named error rather than
 letting it through.
+
+#### Email (Gmail SMTP)
+
+Two features depend on it: the confirmation link sent on sign-up, and the password reset link.
+Both follow the credentials — with `SMTP_USERNAME` and `SMTP_PASSWORD` unset, email confirmation
+is left **off** and sign-up works exactly as it did. That is deliberate: confirmation with no
+working mailer would let people register into an account they could never sign in to.
+
+`SMTP_PASSWORD` is a Google **app password**, not the account password:
+
+1. Turn on 2-Step Verification at [myaccount.google.com/security](https://myaccount.google.com/security)
+2. Create an app password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+3. Put the 16 characters in `apps/api/.env` and restart the backend
+
+Gmail rejects the account password with *"Username and Password not accepted"*, which does not
+mention that an app password was the missing part.
 
 ---
 

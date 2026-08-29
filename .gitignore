@@ -38,6 +38,7 @@ desktop.ini
 # ---- Private working files (not part of the submission) ----
 # The assessment brief is the company's document - keep it out of a public repo.
 Junior Software Engineer — Project Round.pdf
+requirements.md
 PLAN.md
 # Internal build plan and handover notes. The repo is public and graded, and a
 # document listing unfinished work is not something to hand an evaluator.
