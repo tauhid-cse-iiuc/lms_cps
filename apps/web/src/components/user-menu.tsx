@@ -5,9 +5,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { RoleType } from '@/lib/auth';
+import { displayName } from '@/lib/display-name';
 
 type MenuUser = {
   username: string;
+  name?: string | null;
   email?: string;
   role: { type: RoleType; name: string };
 };
@@ -92,9 +94,9 @@ export function UserMenu({ user }: { user: MenuUser }) {
         aria-controls="user-menu"
         className="flex items-center gap-2 rounded-full p-0.5 pr-2 transition-colors hover:bg-ink-100"
       >
-        <Avatar name={user.username} />
+        <Avatar name={displayName(user)} />
         <span className="hidden text-small font-medium text-ink-700 sm:inline">
-          {user.username}
+          {displayName(user)}
         </span>
         <svg
           aria-hidden
@@ -125,9 +127,11 @@ export function UserMenu({ user }: { user: MenuUser }) {
             className="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-xl border border-ink-200 bg-white shadow-lift"
           >
             <div className="flex items-center gap-3 border-b border-ink-100 p-4">
-              <Avatar name={user.username} size="lg" />
+              <Avatar name={displayName(user)} size="lg" />
               <div className="min-w-0">
-                <p className="truncate text-small font-semibold">{user.username}</p>
+                <p className="truncate text-small font-semibold">
+                  {displayName(user)}
+                </p>
                 {user.email && (
                   <p className="truncate text-micro text-ink-500">{user.email}</p>
                 )}

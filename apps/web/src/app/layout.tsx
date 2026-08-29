@@ -51,7 +51,19 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         </a>
 
         <SiteHeader
-          user={user ? { username: user.username, email: user.email, role: user.role } : null}
+          user={
+            user
+              ? {
+                  username: user.username,
+                  // Without this the header calls everyone by their handle:
+                  // displayName falls back to the username when no name is
+                  // passed, and it looks like the name was never saved.
+                  name: user.name,
+                  email: user.email,
+                  role: user.role,
+                }
+              : null
+          }
         />
 
         <div id="main" tabIndex={-1} className="flex-1">

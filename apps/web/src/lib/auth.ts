@@ -45,10 +45,26 @@ export type RoleType = 'admin' | 'content-manager' | 'instructor' | 'student';
 export type CurrentUser = {
   id: number;
   documentId: string;
+  /** The handle they sign in with. Unique, and not editable in this build. */
   username: string;
+  /**
+   * Their actual name, as they would write it. Optional: accounts created
+   * before this field existed have none, and so does a Google account whose
+   * name we could not read - hence `displayName` below rather than reading
+   * this directly at every call site.
+   */
+  name?: string | null;
   email: string;
   role: { id: number; name: string; type: RoleType };
 };
+
+/**
+ * Re-exported so server components can take the user helper and the session
+ * helpers from one import. The implementation lives in a module of its own
+ * because client components need it too and cannot import this file - see
+ * lib/display-name.ts.
+ */
+export { displayName } from './display-name';
 
 /** Cookie attributes. Secure only in production, because localhost is http. */
 export const sessionCookie = (maxAge: number) =>

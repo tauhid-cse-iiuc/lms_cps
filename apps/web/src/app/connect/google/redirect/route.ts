@@ -59,7 +59,32 @@ export async function GET(request: Request) {
     return fail(data?.error?.message ?? 'Could not sign you in with Google.');
   }
 
-  const response = NextResponse.redirect(new URL('/dashboard', url.origin));
+  // Google knows their name; Strapi does not ask for it. Fill it in before
+  // deciding where to send them, so the first page they see greets them
+  // properly rather than by an email prefix.
+  await adoptGoogleName(accessToken, data.jwt);
+
+  /**
+   * Where to land.
+   *
+   * An account created through Google has NO password, so it can only ever be
+   * signed into through Google. That is fine until Google sign-in is
+   * unavailable or the person would rather type a password - at which point
+   * there is no way in at all, and no reset to ask for, because there is
+   * nothing to reset.
+   *
+   * So a passwordless account is offered the form for adding one. Offered, not
+   * forced: the page has a skip. The check is "has no password" rather than "is
+   * new", which means someone who skips is asked again next time and someone
+   * who sets one is never asked again - both without storing a flag anywhere.
+   *
+   * A failure to answer is treated as "has a password", because being sent to
+   * the dashboard is the harmless outcome; the alternative would push people
+   * towards a form they may not need every time the backend hiccups.
+   */
+  const destination = (await hasNoPassword(data.jwt)) ? '/create-password' : '/dashboard';
+
+  const response = NextResponse.redirect(new URL(destination, url.origin));
   response.cookies.set(ACCESS_COOKIE, data.jwt, sessionCookie(ACCESS_MAX_AGE));
   if (data.refreshToken) {
     response.cookies.set(
@@ -70,4 +95,71 @@ export async function GET(request: Request) {
   }
 
   return response;
+}
+
+/** Asks the backend whether the account behind this token has a password yet. */
+async function hasNoPassword(token: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${STRAPI_URL}/api/account/password-status`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+
+    if (!res.ok) return false;
+
+    const body = await res.json();
+    return body?.data?.hasPassword === false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Copies the person's name from Google onto their account, once.
+ *
+ * Strapi's Google provider does not do this. Its `authCallback` asks
+ * `oauth2.googleapis.com/tokeninfo`, which answers with the email and nothing
+ * else, and it derives a username from the part before the `@` - so an account
+ * created through Google arrives with a handle like `jane.doe` and no name at
+ * all, no matter that the consent screen asked for the `profile` scope.
+ *
+ * The userinfo endpoint DOES return the name, and we are holding a token scoped
+ * for it (see seed/providers.js, which requests `email` and `profile`). So this
+ * asks Google directly rather than patching the plugin's internals.
+ *
+ * Failure is deliberately silent. A name is a nicety; refusing to sign somebody
+ * in because Google was slow to answer a second request would trade a working
+ * login for a cosmetic one.
+ */
+async function adoptGoogleName(googleToken: string, jwt: string): Promise<void> {
+  try {
+    const profileRes = await fetch(
+      'https://www.googleapis.com/oauth2/v3/userinfo',
+      {
+        headers: { Authorization: `Bearer ${googleToken}` },
+        cache: 'no-store',
+      }
+    );
+
+    if (!profileRes.ok) return;
+
+    const profile = await profileRes.json();
+    const name = typeof profile?.name === 'string' ? profile.name.trim() : '';
+
+    if (!name) return;
+
+    // The backend only sets a name that is missing, so this cannot overwrite a
+    // name the person has since edited on their account page.
+    await fetch(`${STRAPI_URL}/api/account/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({ name, onlyIfEmpty: true }),
+      cache: 'no-store',
+    });
+  } catch {
+    // Nothing to do: they are signed in, they simply have no name yet.
+  }
 }

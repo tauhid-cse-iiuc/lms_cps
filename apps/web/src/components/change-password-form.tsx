@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { PasswordRequirements } from '@/components/password-requirements';
+import { passwordIsValid } from '@/lib/password-policy';
 
 const field =
   'mt-1.5 w-full rounded-lg border border-ink-300 bg-white px-3.5 py-2.5 text-small outline-none transition-colors placeholder:text-ink-400 focus:border-brand-500';
@@ -20,6 +22,9 @@ export function ChangePasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Only the NEW password is controlled - the meter needs to read it as it is
+  // typed. The rest of the form stays uncontrolled and is read with FormData.
+  const [password, setPassword] = useState('');
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,6 +54,10 @@ export function ChangePasswordForm() {
     }
 
     formEl.reset();
+    // reset() clears the DOM, not React state, so the controlled field would
+    // keep its old value and the meter would go on rating a password that is no
+    // longer in the form.
+    setPassword('');
     setDone(true);
     // The cookies were replaced on the response above; refresh so anything
     // server-rendered is reading the new session.
@@ -76,11 +85,12 @@ export function ChangePasswordForm() {
           required
           minLength={8}
           autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          aria-describedby="password-requirements"
           className={field}
         />
-        <span className="mt-1 block text-micro font-normal text-ink-500">
-          At least 8 characters.
-        </span>
+        <PasswordRequirements value={password} id="password-requirements" />
       </label>
 
       <label className="block text-small font-medium text-ink-700">
@@ -115,7 +125,7 @@ export function ChangePasswordForm() {
 
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || !passwordIsValid(password)}
         className="btn-gradient rounded-xl px-5 py-2.5 text-small font-semibold text-white shadow-glow transition-transform active:scale-[0.98] disabled:opacity-50"
       >
         {busy ? 'Saving…' : 'Change password'}

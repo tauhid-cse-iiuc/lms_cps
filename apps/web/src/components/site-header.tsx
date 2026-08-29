@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { RoleType } from '@/lib/auth';
+import { displayName } from '@/lib/display-name';
 import { SearchBox } from '@/components/search-box';
 import { UserMenu } from '@/components/user-menu';
 
@@ -22,7 +23,12 @@ type NavLink = { href: string; label: string };
 export function SiteHeader({
   user,
 }: {
-  user: { username: string; email?: string; role: { type: RoleType; name: string } } | null;
+  user: {
+    username: string;
+    name?: string | null;
+    email?: string;
+    role: { type: RoleType; name: string };
+  } | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -218,7 +224,7 @@ export function SiteHeader({
                     disabled={busy}
                     className="block w-full rounded-md px-3 py-2 text-left text-small text-ink-600 disabled:opacity-50"
                   >
-                    {busy ? 'Signing out…' : `Sign out (${user.username})`}
+                    {busy ? 'Signing out…' : `Sign out (${displayName(user)})`}
                   </button>
                 ) : (
                   <Link
