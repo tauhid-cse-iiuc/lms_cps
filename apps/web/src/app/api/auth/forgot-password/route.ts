@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     // likely cause is named instead.
     const message =
       res.status >= 500
-        ? 'The email could not be sent. The mail service may not be configured on this deployment.'
+        ? 'The email could not be sent. The mail service is not reachable from this deployment right now.'
         : (data?.error?.message ?? 'Could not send the reset email.');
 
     return NextResponse.json({ error: message }, { status: res.status });

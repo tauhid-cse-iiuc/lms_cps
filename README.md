@@ -8,8 +8,8 @@ blog with draft/published states.
 |---|---|---|
 | Frontend | Next.js 16 (App Router, TypeScript, Tailwind) | https://lms-cps-eta.vercel.app |
 | Backend / CMS | Strapi 5 (PostgreSQL) | https://lmscps-production.up.railway.app |
-
-Backend admin panel: https://lmscps-production.up.railway.app/admin
+<!-- 
+Backend admin panel: https://lmscps-production.up.railway.app/admin -->
 
 ---
 

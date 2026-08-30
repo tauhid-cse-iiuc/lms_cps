@@ -79,6 +79,21 @@ const mailer = (env) => {
           port: env.int('SMTP_PORT', 465),
           secure: env.bool('SMTP_SECURE', true),
           auth: { user, pass },
+
+          /**
+           * Fail fast when the SMTP host cannot be reached at all.
+           *
+           * Nodemailer's defaults are two minutes, and a platform that blocks
+           * outbound SMTP does not refuse the connection - it drops it, so the
+           * socket simply never answers. Without these, registering hangs the
+           * request until something upstream gives up, and the person is left
+           * watching a spinner rather than reading an error. Ten seconds is
+           * far longer than a working handshake needs and far shorter than a
+           * visitor will wait.
+           */
+          connectionTimeout: 10_000,
+          greetingTimeout: 10_000,
+          socketTimeout: 15_000,
         },
         settings: {
           // Gmail rewrites the envelope sender to the authenticated account
