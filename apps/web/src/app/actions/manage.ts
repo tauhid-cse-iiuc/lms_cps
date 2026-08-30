@@ -154,42 +154,111 @@ export async function deleteLessonAction(documentId: string, courseId: string) {
 
 export type QuestionInput = { text: string; options: string[]; correctIndex: number };
 
+/** The bounds a time limit has to sit inside, shared by create and update. */
+const MIN_TIME_LIMIT = 30;
+const MAX_TIME_LIMIT = 3 * 60 * 60;
+
+/**
+ * Everything create and update both have to check.
+ *
+ * One function rather than two copies, because the two paths must agree: a quiz
+ * that could be created would otherwise be rejected on edit, or worse, the
+ * reverse - an edit slipping through a rule that create enforces.
+ */
+function validateQuiz(input: {
+  title: string;
+  questions: QuestionInput[];
+  timeLimitSeconds?: number;
+}) {
+  if (!input.title.trim()) return 'A title is required.';
+  if (input.questions.length === 0) return 'Add at least one question.';
+
+  if (input.timeLimitSeconds !== undefined) {
+    if (!Number.isFinite(input.timeLimitSeconds)) return 'Enter a time limit in minutes.';
+    if (input.timeLimitSeconds < MIN_TIME_LIMIT) {
+      return 'A time limit of less than 30 seconds is not usable.';
+    }
+    if (input.timeLimitSeconds > MAX_TIME_LIMIT) {
+      return 'Keep the time limit under three hours.';
+    }
+  }
+
+  for (const [i, q] of input.questions.entries()) {
+    if (!q.text.trim()) return `Question ${i + 1} needs some text.`;
+
+    const options = q.options.map((o) => o.trim()).filter(Boolean);
+    if (options.length < 2) return `Question ${i + 1} needs at least two options.`;
+
+    if (q.correctIndex < 0 || q.correctIndex >= options.length) {
+      return `Question ${i + 1} needs one of its options marked correct.`;
+    }
+  }
+
+  return null;
+}
+
+/** The shape Strapi wants, from the shape the form holds. */
+const quizPayload = (input: {
+  title: string;
+  questions: QuestionInput[];
+  timeLimitSeconds?: number;
+}) => ({
+  title: input.title.trim(),
+  ...(input.timeLimitSeconds === undefined
+    ? {}
+    : { timeLimitSeconds: input.timeLimitSeconds }),
+  questions: input.questions.map((q) => ({
+    text: q.text.trim(),
+    options: q.options.map((o) => o.trim()).filter(Boolean),
+    correctIndex: q.correctIndex,
+  })),
+});
+
 export async function createQuizAction(input: {
   courseId: string;
   title: string;
   questions: QuestionInput[];
+  timeLimitSeconds?: number;
 }) {
-  if (!input.title.trim()) return { ok: false as const, error: 'A title is required.' };
-  if (input.questions.length === 0) {
-    return { ok: false as const, error: 'Add at least one question.' };
-  }
-
-  for (const [i, q] of input.questions.entries()) {
-    if (!q.text.trim()) {
-      return { ok: false as const, error: `Question ${i + 1} needs some text.` };
-    }
-    const options = q.options.map((o) => o.trim()).filter(Boolean);
-    if (options.length < 2) {
-      return { ok: false as const, error: `Question ${i + 1} needs at least two options.` };
-    }
-    if (q.correctIndex < 0 || q.correctIndex >= options.length) {
-      return {
-        ok: false as const,
-        error: `Question ${i + 1} needs one of its options marked correct.`,
-      };
-    }
-  }
+  const problem = validateQuiz(input);
+  if (problem) return { ok: false as const, error: problem };
 
   const res = await apiPost(`/api/quizzes`, {
-    data: {
-      title: input.title.trim(),
-      course: input.courseId,
-      questions: input.questions.map((q) => ({
-        text: q.text.trim(),
-        options: q.options.map((o) => o.trim()).filter(Boolean),
-        correctIndex: q.correctIndex,
-      })),
-    },
+    data: { ...quizPayload(input), course: input.courseId },
+  });
+
+  if (!res.ok) return { ok: false as const, error: res.error };
+
+  revalidatePath(`/manage/courses/${input.courseId}`);
+  revalidatePath(`/courses/${input.courseId}`);
+
+  return { ok: true as const };
+}
+
+/**
+ * Edit an existing quiz: its title, its time limit and its questions.
+ *
+ * `questions` is a component list, so Strapi replaces the whole array rather
+ * than merging it - which is why the form always sends every question, not just
+ * the changed one.
+ *
+ * Ownership is not checked here. It is checked by the can-manage-course-children
+ * policy on the route, which walks from the quiz to its parent course and
+ * compares the owner against the token. A check in this action would be a
+ * second, weaker copy of that.
+ */
+export async function updateQuizAction(input: {
+  documentId: string;
+  courseId: string;
+  title: string;
+  questions: QuestionInput[];
+  timeLimitSeconds?: number;
+}) {
+  const problem = validateQuiz(input);
+  if (problem) return { ok: false as const, error: problem };
+
+  const res = await apiPut(`/api/quizzes/${input.documentId}`, {
+    data: quizPayload(input),
   });
 
   if (!res.ok) return { ok: false as const, error: res.error };
