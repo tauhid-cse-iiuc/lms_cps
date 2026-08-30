@@ -201,9 +201,13 @@ module.exports = ({ strapi }) => ({
             'Use 3-30 characters: letters, numbers, dots, dashes or underscores.',
         };
       } else {
+        // `$eqi` - case-insensitive equality. "Tanim" and "tanim" are the same
+        // handle to a person, so treating them as two free usernames would let
+        // two accounts exist that nobody can tell apart, and make signing in
+        // depend on remembering how you capitalised it.
         const taken = await strapi.db
           .query('plugin::users-permissions.user')
-          .count({ where: { username } });
+          .count({ where: { username: { $eqi: username } } });
 
         result.username = {
           valid: true,
@@ -224,9 +228,12 @@ module.exports = ({ strapi }) => ({
           reason: `Password sign-up needs a ${signupPolicy.describeAllowed()} address. Sign in with Google to use another.`,
         };
       } else {
+        // Lowercased on the way in already, but matched case-insensitively too:
+        // an address stored before that normalisation, or written by the Google
+        // provider, must still count as taken.
         const taken = await strapi.db
           .query('plugin::users-permissions.user')
-          .count({ where: { email } });
+          .count({ where: { email: { $eqi: email } } });
 
         result.email = {
           valid: true,

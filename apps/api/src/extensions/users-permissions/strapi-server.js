@@ -139,11 +139,40 @@ module.exports = (plugin) => {
         return originalCallback(ctx);
       }
 
+      /**
+       * Matched case-insensitively, with `$eqi`.
+       *
+       * The plugin lowercases the identifier before comparing it to `email` but
+       * compares `username` exactly, so signing in as "Tanim" fails for an
+       * account registered as "tanim". Nobody thinks of their handle as
+       * case-sensitive, and an error that says "invalid identifier or password"
+       * gives them no way to work out that the capital T was the problem.
+       */
       const user = await strapi.db.query('plugin::users-permissions.user').findOne({
         where: {
-          $or: [{ email: identifier.toLowerCase() }, { username: identifier }],
+          $or: [
+            { email: { $eqi: identifier } },
+            { username: { $eqi: identifier } },
+          ],
         },
       });
+
+      /**
+       * Hand the plugin the identifier exactly as it is stored.
+       *
+       * Everything below this point either delegates to the plugin or does its
+       * own lookup, and the plugin will repeat the query with an exact match on
+       * username. Rewriting the identifier here means its match succeeds, and
+       * every check it makes afterwards - password, confirmation, blocked, rate
+       * limiting - still runs untouched. The alternative, reimplementing those
+       * checks to avoid the second query, is how login paths grow holes.
+       */
+      if (user) {
+        ctx.request.body.identifier =
+          user.email?.toLowerCase() === identifier.toLowerCase()
+            ? user.email
+            : user.username;
+      }
 
       /**
        * Hand back to the plugin for every ordinary case.

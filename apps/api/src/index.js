@@ -29,10 +29,36 @@ module.exports = {
     strapi.db.lifecycles.subscribe({
       models: ['plugin::users-permissions.user'],
 
-      beforeCreate(event) {
+      async beforeCreate(event) {
         if (signupPolicy.isBypassing()) return;
 
-        const { email, provider } = event.params?.data ?? {};
+        const { email, username, provider } = event.params?.data ?? {};
+
+        /**
+         * No two accounts whose username differs only by capitalisation.
+         *
+         * Strapi's own uniqueness check on username is an exact match, so
+         * "tanim" and "Tanim" are two free names as far as it is concerned -
+         * and since sign-in now matches case-insensitively, both would answer
+         * to the same typed identifier. One of them would simply become
+         * unreachable.
+         *
+         * Applied to password sign-ups only. The Google provider derives a
+         * username from the address and has its own collision handling, and
+         * refusing a Google account outright over capitalisation would lock
+         * somebody out of a platform they were never able to choose a handle
+         * for.
+         */
+        if (provider === 'local' && typeof username === 'string' && username) {
+          const clash = await strapi.db
+            .query('plugin::users-permissions.user')
+            .count({ where: { username: { $eqi: username } } });
+
+          if (clash > 0) {
+            const { errors } = require('@strapi/utils');
+            throw new errors.ApplicationError('That username is already taken.');
+          }
+        }
 
         // Third-party sign-ins are exempt: Google has already authenticated the
         // person and told us which address is theirs, including Workspace
